@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>구매 명세표 스캔 보관함</title>
+  <style>
+    :root { --bg:#efe7da; --card:#fffaf3; --line:#ddcfbb; --ink:#1f2933; --muted:#66788a; --accent:#9c4f1a; --ok:#1d6f42; --warn:#9a5a0a; --shadow:0 18px 40px rgba(31,41,51,.08); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Segoe UI","Noto Sans KR",sans-serif; color:var(--ink); background:linear-gradient(180deg,#f6efe4 0%,#ebe0cd 100%); }
+    .shell { width:min(1240px,calc(100% - 28px)); margin:20px auto 40px; display:grid; gap:18px; }
+    .hero,.card { border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); overflow:hidden; }
+    .hero { padding:28px; background:linear-gradient(135deg,#2c2318 0%,#6b4529 100%); color:#fffaf2; }
+    .hero h1 { margin:0 0 8px; font-size:clamp(2rem,4vw,3rem); }
+    .hero p { margin:0; color:rgba(255,250,242,.84); }
+    .card { background:var(--card); }
+    .body { padding:18px; }
+    .grid { display:grid; grid-template-columns:320px minmax(0,1fr); gap:18px; align-items:start; }
+    #documentsView { grid-template-columns:minmax(0,1.3fr) minmax(360px,0.9fr); }
+    .stack,.fields,.stats,.detail-grid,.actions,.menu-tabs { display:grid; gap:12px; }
+    .stack { gap:18px; }
+    .fields { grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
+    .stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .detail-grid { grid-template-columns:1fr 1fr; }
+    h2,h3,h4,p { margin:0; }
+    p,.meta { color:var(--muted); }
+    .meta { font-size:13px; }
+    label { display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:4px; }
+    input,select,textarea,button { width:100%; border-radius:14px; border:1px solid #d7c8b5; padding:11px 13px; font:inherit; margin:0; }
+    textarea { min-height:140px; resize:vertical; background:#fff; }
+    input,select { background:#fff; }
+    button { border:0; cursor:pointer; background:var(--accent); color:#fff; font-weight:600; }
+    button.alt { background:#ead9c6; color:#5b4633; }
+    button.ghost { background:transparent; border:1px solid #d7c8b5; color:#5b4633; }
+    .actions { grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }
+    .menu-tabs { grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
+    .stat,.box,.doc { border:1px solid var(--line); border-radius:18px; background:#fffdf9; }
+    .stat,.box,.doc { padding:14px; }
+    .stat strong { display:block; font-size:24px; margin-top:8px; }
+    .badge { display:inline-block; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#efe2d2; color:#7b4d21; text-transform:uppercase; }
+    .badge.completed { background:#dff3e8; color:var(--ok); }
+    .badge.review { background:#fff1d8; color:var(--warn); }
+    .badge.processing { background:#ece6ff; color:#6550b9; }
+    .list { display:grid; gap:10px; max-height:620px; overflow:auto; }
+    .table-scroll { overflow:auto; border:1px solid var(--line); border-radius:18px; background:#fffdf9; }
+    .sheet { width:100%; min-width:860px; border-collapse:collapse; }
+    .sheet thead th { position:sticky; top:0; background:#f6ecdf; z-index:1; }
+    .sheet tbody tr { cursor:pointer; }
+    .sheet tbody tr.active { background:#f9efe1; }
+    .sheet tbody tr:hover { background:#fcf4e8; }
+    .period-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+    .period-tabs button { width:auto; min-width:88px; }
+    .doc { cursor:pointer; }
+    .doc.active { border-color:var(--accent); }
+    .doc-top,.rowline,.detail-head { display:flex; justify-content:space-between; gap:12px; align-items:start; }
+    .menu-button.active { background:var(--accent); color:#fff; }
+    .kv { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .kv .box { padding:12px; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td { text-align:left; padding:8px; border-bottom:1px solid #eadfce; font-size:14px; }
+    pre { margin:0; white-space:pre-wrap; background:#f9f3ea; border:1px solid var(--line); border-radius:14px; padding:12px; max-height:280px; overflow:auto; }
+    .hidden { display:none !important; }
+    @media (max-width:980px) { .grid,.detail-grid,.stats { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <h1>구매 명세표 스캔 보관함</h1>
+      <p>회사 계정으로 로그인해 국내 구매 명세표를 업로드하고, OCR 결과를 검토한 뒤 저장 상태까지 관리하는 화면입니다.</p>
+    </section>
+
+    <section id="loginView" class="card">
+      <div class="body">
+        <h2>로그인</h2>
+        <p style="margin-top:8px;">워드프레스 계정으로 로그인하면 앱 세션이 생성됩니다.</p>
+        <div class="fields" style="margin-top:14px;">
+          <div><label for="username">아이디</label><input id="username" value="suesoo"></div>
+          <div><label for="password">비밀번호</label><input id="password" type="password" value="8088"></div>
+        </div>
+        <div class="actions" style="margin-top:14px;">
+          <button id="loginButton">로그인</button>
+          <button id="healthButton" class="alt">상태 확인</button>
+        </div>
+        <div class="box" style="margin-top:14px;"><pre id="authResult">대기 중...</pre></div>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div class="stats">
+        <div class="stat"><span class="meta">회사</span><strong id="summaryCompany">-</strong><span id="summaryUser" class="meta">-</span></div>
+        <div class="stat"><span class="meta">문서 수</span><strong id="summaryDocs">0</strong><span class="meta">현재 목록 기준</span></div>
+        <div class="stat"><span class="meta">서비스</span><strong id="summaryStatus">준비됨</strong><span id="summaryHealth" class="meta">상태 확인 전</span></div>
+      </div>
+
+      <section class="card"><div class="body">
+        <div class="menu-tabs">
+          <button id="documentsMenuButton" class="menu-button">문서 관리</button>
+          <button id="processMenuButton" class="menu-button ghost">업로드/OCR</button>
+          <button id="reportsMenuButton" class="menu-button ghost">리포트</button>
+        </div>
+      </div></section>
+
+      <section id="processView" class="card hidden"><div class="body">
+        <div class="detail-head">
+          <div>
+            <h2>업로드 및 OCR 처리</h2>
+            <p class="meta" style="margin-top:4px;">파일 업로드와 OCR 실행은 이 메뉴에서 진행합니다.</p>
+          </div>
+        </div>
+        <div class="fields" style="margin-top:12px;">
+          <div><label for="documentType">문서 종류</label><select id="documentType"><option value="invoice">구매 명세표</option><option value="receipt">영수증</option></select></div>
+          <div><label for="modelName">모델</label><input id="modelName" value=""></div>
+        </div>
+        <div style="margin-top:10px;"><label for="fileInput">파일</label><input id="fileInput" type="file"></div>
+        <div class="actions" style="margin-top:12px;">
+          <button id="uploadButton">업로드</button>
+          <button id="demoButton" class="alt">데모 작업 실행</button>
+        </div>
+        <div class="box" style="margin-top:12px;"><pre id="uploadResult">대기 중...</pre></div>
+      </div></section>
+
+      <section id="reportsView" class="card hidden"><div class="body">
+        <div class="detail-head">
+          <div>
+            <h2>리포트</h2>
+            <p class="meta" style="margin-top:4px;">저장 완료된 문서를 기준으로 요약 보고서를 확인합니다.</p>
+          </div>
+        </div>
+        <div class="fields" style="margin-top:12px;">
+          <div><label for="reportPeriodType">기간 단위</label><select id="reportPeriodType"><option value="monthly">월별</option><option value="quarterly">분기별</option></select></div>
+          <div><label for="reportDateFrom">시작일</label><input id="reportDateFrom" type="date"></div>
+          <div><label for="reportDateTo">종료일</label><input id="reportDateTo" type="date"></div>
+        </div>
+        <div class="actions" style="margin-top:12px;">
+          <button id="reportButton">리포트 조회</button>
+          <button id="reportExcelButton" class="alt">엑셀 내보내기</button>
+          <button id="reportPdfButton" class="ghost">PDF 내보내기</button>
+        </div>
+        <div class="detail-grid" style="margin-top:14px;">
+          <div class="stack">
+            <div class="box"><h3>요약</h3><pre id="reportSummaryResult" style="margin-top:10px;">대기 중...</pre></div>
+            <div class="box"><h3>기간별</h3><pre id="reportPeriodsResult" style="margin-top:10px;">대기 중...</pre></div>
+          </div>
+          <div class="stack">
+            <div class="box"><h3>거래처별</h3><pre id="reportVendorsResult" style="margin-top:10px;">대기 중...</pre></div>
+            <div class="box"><h3>품목별</h3><pre id="reportItemsResult" style="margin-top:10px;">대기 중...</pre></div>
+          </div>
+        </div>
+      </div></section>
+
+      <div id="documentsView" class="grid">
+        <aside class="stack">
+          <section class="card"><div class="body">
+            <h3>세션</h3>
+            <div id="sessionInfo" class="box" style="margin-top:12px;">불러오는 중...</div>
+            <div class="actions" style="margin-top:12px;">
+              <button id="refreshSessionButton" class="alt">새로고침</button>
+              <button id="logoutButton" class="ghost">로그아웃</button>
+            </div>
+          </div></section>
+
+          <section id="legacyProcessCard" class="card hidden"><div class="body">
+            <h3>문서 업로드</h3>
+            <div class="fields" style="margin-top:12px;">
+              <div><label for="legacyDocumentType">문서 종류</label><select id="legacyDocumentType"><option value="invoice">구매 명세표</option><option value="receipt">영수증</option></select></div>
+              <div><label for="legacyModelName">모델</label><input id="legacyModelName" value=""></div>
+            </div>
+            <div style="margin-top:10px;"><label for="legacyFileInput">파일</label><input id="legacyFileInput" type="file"></div>
+            <div class="actions" style="margin-top:12px;">
+              <button id="legacyUploadButton">업로드</button>
+              <button id="legacyDemoButton" class="alt">데모 작업 실행</button>
+            </div>
+            <div class="box" style="margin-top:12px;"><pre id="legacyUploadResult">대기 중...</pre></div>
+          </div></section>
+
+          <section class="card"><div class="body">
+            <h3>문서 목록</h3>
+            <div class="fields" style="margin-top:12px;">
+              <div><label for="listLimit">조회 개수</label><input id="listLimit" value="200"></div>
+              <div><label for="filterText">검색</label><input id="filterText" placeholder="거래처, 파일명, 금액"></div>
+            </div>
+            <div class="period-tabs" style="margin-top:12px;">
+              <button id="period1mButton" class="ghost">최근 1개월</button>
+              <button id="period3mButton" class="ghost">최근 3개월</button>
+              <button id="period6mButton" class="ghost">최근 6개월</button>
+              <button id="period12mButton" class="ghost">최근 1년</button>
+            </div>
+            <div class="actions" style="margin-top:12px;">
+              <button id="listButton">새로고침</button>
+              <button id="pollButton" class="alt">30초 자동조회</button>
+              <button id="trashToggleButton" class="ghost">휴지통 보기</button>
+            </div>
+            <div id="docList" class="list" style="margin-top:12px;"></div>
+          </div></section>
+        </aside>
+
+        <section class="card"><div class="body">
+          <div class="detail-head">
+            <div>
+              <h2 id="detailTitle">문서 상세</h2>
+              <p id="detailSubtitle" class="meta" style="margin-top:4px;">왼쪽 목록에서 문서를 선택해 주세요.</p>
+            </div>
+            <div id="detailStatusBadge" class="badge">idle</div>
+          </div>
+
+          <div id="emptyDetail" class="box" style="margin-top:14px;">선택된 문서가 없습니다.</div>
+          <div id="detailContent" class="hidden" style="margin-top:14px;">
+            <div class="detail-grid">
+              <div class="stack">
+                <div class="box"><h3>기본 정보</h3><div id="detailKv" class="kv" style="margin-top:12px;"></div></div>
+                <div class="box"><h3>품목</h3><div id="itemsBox"></div></div>
+                <div class="box"><h3>OCR 원문</h3><pre id="ocrRawResult" style="margin-top:10px;">대기 중...</pre></div>
+              </div>
+
+              <div class="stack">
+                <div class="box">
+                  <h3>검토 편집</h3>
+                  <div class="fields" style="margin-top:12px;">
+                    <div><label for="reviewVendorName">공급하는자(판매자)</label><input id="reviewVendorName"></div>
+                    <div><label for="reviewVendorRegNo">판매자 사업자번호</label><input id="reviewVendorRegNo" placeholder="000-00-00000"></div>
+                    <div><label for="reviewBuyerName">공급받는자(구매자)</label><input id="reviewBuyerName"></div>
+                    <div><label for="reviewBuyerRegNo">구매자 사업자번호</label><input id="reviewBuyerRegNo" placeholder="000-00-00000"></div>
+                    <div><label for="reviewIssueDate">작성일</label><input id="reviewIssueDate" placeholder="YYYY-MM-DD"></div>
+                    <div><label for="reviewInvoiceNumber">명세표 번호</label><input id="reviewInvoiceNumber"></div>
+                    <div><label for="reviewReceiptNumber">영수증 번호</label><input id="reviewReceiptNumber"></div>
+                    <div><label for="reviewPaymentMethod">결제수단</label><input id="reviewPaymentMethod"></div>
+                    <div><label for="reviewModelName">재처리 모델</label><input id="reviewModelName" value=""></div>
+                    <div><label for="reviewSupplyAmount">공급가액</label><input id="reviewSupplyAmount"></div>
+                    <div><label for="reviewTaxAmount">세액</label><input id="reviewTaxAmount"></div>
+                    <div><label for="reviewTotalAmount">합계금액</label><input id="reviewTotalAmount"></div>
+                  </div>
+                  <div style="margin-top:10px;"><label for="reviewItems">품목 JSON</label><textarea id="reviewItems"></textarea></div>
+                  <div class="actions" style="margin-top:12px;">
+                    <button id="saveReviewButton">저장</button>
+                    <button id="completeReviewButton" class="alt">검토 완료</button>
+                    <button id="reprocessButton" class="ghost">재처리</button>
+                    <button id="deleteButton" class="ghost">휴지통으로 이동</button>
+                    <button id="restoreButton" class="alt hidden">복원</button>
+                  </div>
+                </div>
+                <div class="box"><h3>디버그</h3><pre id="documentResult" style="margin-top:10px;">대기 중...</pre></div>
+                <div class="box"><h3>상태 정보</h3><pre id="healthResult" style="margin-top:10px;">대기 중...</pre></div>
+              </div>
+            </div>
+          </div>
+        </div></section>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let defaultOcrModel = "qwen3.5:9B";
+    const json = (obj) => JSON.stringify(obj, null, 2);
+    let pollTimer = null, currentDetail = null, currentSession = null, currentDocuments = [], selectedDocumentId = "", showTrash = false, currentView = "documents", currentPeriodMonths = 1;
+    const $ = (id) => document.getElementById(id);
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      return { ok: response.ok, status: response.status, payload: await response.json() };
+    }
+    const parseNum = (v) => (v === "" || v == null ? null : Number(v));
+    const ensureAuthenticated = () => { if (!currentSession?.authenticated) throw new Error("먼저 로그인해 주세요."); };
+    const badgeClass = (s) => `badge ${String(s || "idle").toLowerCase()}`;
+    const formatMoney = (value) => {
+      if (value == null || value === "") return "-";
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toLocaleString("ko-KR") : String(value);
+    };
+
+    function isWithinMonths(value, months) {
+      if (!value) return false;
+      const target = new Date(value);
+      if (Number.isNaN(target.getTime())) return false;
+      const today = new Date();
+      const boundary = new Date(today.getFullYear(), today.getMonth() - months, today.getDate() + 1);
+      return target >= boundary;
+    }
+
+    function setPeriodFilter(months) {
+      currentPeriodMonths = months;
+      [["period1mButton", 1], ["period3mButton", 3], ["period6mButton", 6], ["period12mButton", 12]].forEach(([id, value]) => {
+        $(id).className = months === value ? "menu-button active" : "menu-button ghost";
+      });
+      renderDocuments();
+    }
+
+    function setAppVisibility() {
+      const on = !!currentSession?.authenticated;
+      $("loginView").classList.toggle("hidden", on);
+      $("appView").classList.toggle("hidden", !on);
+    }
+
+    function setCurrentView(view) {
+      currentView = ["documents", "process", "reports"].includes(view) ? view : "documents";
+      $("documentsView").classList.toggle("hidden", currentView !== "documents");
+      $("processView").classList.toggle("hidden", currentView !== "process");
+      $("reportsView").classList.toggle("hidden", currentView !== "reports");
+      $("documentsMenuButton").className = currentView === "documents" ? "menu-button active" : "menu-button ghost";
+      $("processMenuButton").className = currentView === "process" ? "menu-button active" : "menu-button ghost";
+      $("reportsMenuButton").className = currentView === "reports" ? "menu-button active" : "menu-button ghost";
+    }
+
+    function renderSession() {
+      if (!currentSession?.authenticated) { $("sessionInfo").textContent = "로그인되어 있지 않습니다."; return; }
+      const u = currentSession.user;
+      $("summaryCompany").textContent = u.company_name || u.company_code || "-";
+      $("summaryUser").textContent = `${u.name} · ${u.email}`;
+      $("sessionInfo").innerHTML = `<strong>${u.name}</strong><div class="meta">${u.email}</div><div class="meta">회사: ${u.company_name} (${u.company_code})</div><div class="meta">워드프레스 사용자 ID: ${u.wp_user_id}</div><div class="meta">만료 시각: ${currentSession.expires_at || "-"}</div>`;
+    }
+
+    function renderDocuments() {
+      return renderDocumentGrid();
+      const q = $("filterText").value.trim().toLowerCase();
+      const items = currentDocuments.filter((item) => !q || [item.original_filename, item.vendor_name, item.total_amount, item.status, item.model_name].filter(Boolean).join(" ").toLowerCase().includes(q));
+      $("summaryDocs").textContent = String(items.length);
+      $("docList").innerHTML = items.length ? items.map((item) => `
+        <article class="doc ${item.id === selectedDocumentId ? "active" : ""}" data-id="${item.id}">
+          <div class="doc-top"><div><h4>${item.original_filename || item.id}</h4><div class="meta">${item.vendor_name || "거래처 미확인"}</div></div><div class="${badgeClass(item.status)}">${item.status || "unknown"}</div></div>
+          <div class="rowline meta" style="margin-top:8px;"><span>${item.issue_date || "-"}</span><span>${item.total_amount || "-"} ${item.currency || ""}</span></div>
+          <div class="rowline meta" style="margin-top:4px;"><span>${item.type || "-"}</span><span>${item.model_name || "-"}</span></div>
+          ${item.purge_at ? `<div class="meta" style="margin-top:6px;">삭제 예정: ${item.purge_at}</div>` : ""}
+        </article>`).join("") : `<div class="box">조회된 문서가 없습니다.</div>`;
+      document.querySelectorAll(".doc").forEach((card) => card.addEventListener("click", async () => { selectedDocumentId = card.dataset.id; await refreshDocument(selectedDocumentId); renderDocuments(); }));
+    }
+
+    function renderDocumentGrid() {
+      const q = $("filterText").value.trim().toLowerCase();
+      const items = currentDocuments.filter((item) => {
+        const textMatched = !q || [item.original_filename, item.vendor_name, item.total_amount, item.supply_amount, item.tax_amount, item.status, item.model_name].filter(Boolean).join(" ").toLowerCase().includes(q);
+        return textMatched && isWithinMonths(item.issue_date || item.created_at, currentPeriodMonths);
+      });
+      $("summaryDocs").textContent = String(items.length);
+      $("docList").innerHTML = items.length ? `
+        <div class="table-scroll">
+          <table class="sheet">
+            <thead>
+              <tr>
+                <th>날짜</th>
+                <th>거래처(공급하는자)</th>
+                <th>공급가액</th>
+                <th>세액</th>
+                <th>합계금액</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item) => `
+                <tr class="${item.id === selectedDocumentId ? "active" : ""}" data-id="${item.id}">
+                  <td>${item.issue_date || String(item.created_at || "").slice(0, 10) || "-"}</td>
+                  <td>${item.vendor_name || "-"}</td>
+                  <td>${formatMoney(item.supply_amount)}</td>
+                  <td>${formatMoney(item.tax_amount)}</td>
+                  <td>${formatMoney(item.total_amount)}</td>
+                  <td><span class="${badgeClass(item.status)}">${item.status || "unknown"}</span></td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>` : `<div class="box">선택한 기간에 표시할 문서가 없습니다.</div>`;
+      document.querySelectorAll("#docList tbody tr").forEach((row) => row.addEventListener("click", async () => { selectedDocumentId = row.dataset.id; await refreshDocument(selectedDocumentId); renderDocuments(); }));
+    }
+
+    function renderDetail() {
+      if (!currentDetail?.document) {
+        $("emptyDetail").classList.remove("hidden");
+        $("detailContent").classList.add("hidden");
+        $("detailTitle").textContent = "문서 상세";
+        $("detailSubtitle").textContent = "왼쪽 목록에서 문서를 선택해 주세요.";
+        $("detailStatusBadge").className = "badge";
+        $("detailStatusBadge").textContent = "idle";
+        return;
+      }
+      const doc = currentDetail.document;
+      $("emptyDetail").classList.add("hidden");
+      $("detailContent").classList.remove("hidden");
+      $("detailTitle").textContent = doc.original_filename || doc.id;
+      $("detailSubtitle").textContent = `${doc.type || "-"} · ${doc.company_id || "-"}`;
+      $("detailStatusBadge").className = badgeClass(doc.status);
+      $("detailStatusBadge").textContent = doc.status || "unknown";
+      $("detailKv").innerHTML = [["공급하는자(판매자)", doc.vendor_name || "-"], ["판매자 사업자번호", doc.vendor_reg_no || "-"], ["공급받는자(구매자)", doc.buyer_name || "-"], ["구매자 사업자번호", doc.buyer_reg_no || "-"], ["작성일", doc.issue_date || "-"], ["공급가액", doc.supply_amount || "-"], ["세액", doc.tax_amount || "-"], ["합계금액", `${doc.total_amount || "-"} ${doc.currency || ""}`], ["명세표 번호", doc.invoice_number || "-"], ["영수증 번호", doc.receipt_number || "-"], ["파일 경로", doc.file_path || "-"]].map(([k, v]) => `<div class="box"><span class="meta">${k}</span><strong>${v}</strong></div>`).join("");
+      const items = currentDetail.items || [];
+      $("itemsBox").innerHTML = items.length ? `<table><thead><tr><th>순번</th><th>품목명</th><th>수량</th><th>단가</th><th>금액</th></tr></thead><tbody>${items.map((i) => `<tr><td>${i.line_no ?? "-"}</td><td>${i.item_name || "-"}</td><td>${i.quantity || "-"}</td><td>${i.unit_price || "-"}</td><td>${i.line_amount || "-"}</td></tr>`).join("")}</tbody></table>` : `<div class="box">품목 정보가 없습니다.</div>`;
+      $("ocrRawResult").textContent = currentDetail.ocr_raw?.raw_text || "원문이 없습니다.";
+      $("documentResult").textContent = json(currentDetail);
+      $("deleteButton").classList.toggle("hidden", !!doc.deleted_at);
+      $("restoreButton").classList.toggle("hidden", !doc.deleted_at);
+      $("reviewVendorName").value = doc.vendor_name || "";
+      $("reviewVendorRegNo").value = doc.vendor_reg_no || "";
+      $("reviewBuyerName").value = doc.buyer_name || "";
+      $("reviewBuyerRegNo").value = doc.buyer_reg_no || "";
+      $("reviewIssueDate").value = doc.issue_date || "";
+      $("reviewInvoiceNumber").value = doc.invoice_number || "";
+      $("reviewReceiptNumber").value = doc.receipt_number || "";
+      $("reviewPaymentMethod").value = doc.payment_method || "";
+      $("reviewSupplyAmount").value = doc.supply_amount || "";
+      $("reviewTaxAmount").value = doc.tax_amount || "";
+      $("reviewTotalAmount").value = doc.total_amount || "";
+      $("reviewItems").value = json(items);
+    }
+
+    function reviewPayload() {
+      return { vendor_name: $("reviewVendorName").value || null, vendor_reg_no: $("reviewVendorRegNo").value || null, buyer_name: $("reviewBuyerName").value || null, buyer_reg_no: $("reviewBuyerRegNo").value || null, issue_date: $("reviewIssueDate").value || null, invoice_number: $("reviewInvoiceNumber").value || null, receipt_number: $("reviewReceiptNumber").value || null, payment_method: $("reviewPaymentMethod").value || null, supply_amount: parseNum($("reviewSupplyAmount").value), tax_amount: parseNum($("reviewTaxAmount").value), total_amount: parseNum($("reviewTotalAmount").value), items: JSON.parse($("reviewItems").value || "[]") };
+    }
+
+    async function refreshHealth() {
+      const { payload } = await fetchJson("/api/health");
+      $("healthResult").textContent = json(payload);
+      $("summaryStatus").textContent = payload.middleware?.status || "알 수 없음";
+      $("summaryHealth").textContent = payload.middleware?.database ? `미들웨어: ${payload.middleware.status}, DB: ${payload.middleware.database}` : "미들웨어 상태를 확인할 수 없습니다.";
+    }
+
+    async function refreshConfig() {
+      const { payload } = await fetchJson("/api/config");
+      defaultOcrModel = payload?.default_ocr_model || defaultOcrModel;
+      $("modelName").value = defaultOcrModel;
+      $("reviewModelName").value = defaultOcrModel;
+    }
+
+    async function refreshReport() {
+      ensureAuthenticated();
+      const periodType = $("reportPeriodType").value;
+      const dateFrom = $("reportDateFrom").value || "";
+      const dateTo = $("reportDateTo").value || "";
+      const { payload } = await fetchJson(`/api/reports/summary?period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`);
+      $("reportSummaryResult").textContent = json(payload.summary || {});
+      $("reportPeriodsResult").textContent = json(payload.periods || []);
+      $("reportVendorsResult").textContent = json(payload.vendors || []);
+      $("reportItemsResult").textContent = json(payload.items || []);
+    }
+
+    function exportReport(kind) {
+      ensureAuthenticated();
+      const periodType = $("reportPeriodType").value;
+      const dateFrom = $("reportDateFrom").value || "";
+      const dateTo = $("reportDateTo").value || "";
+      window.location.href = `/api/reports/export.${kind}?period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`;
+    }
+
+    async function refreshSession() {
+      const { payload } = await fetchJson("/api/auth/me");
+      currentSession = payload;
+      $("authResult").textContent = json(payload);
+      setAppVisibility();
+      renderSession();
+      return payload;
+    }
+
+    async function refreshList() {
+      ensureAuthenticated();
+      const { payload } = await fetchJson(`/api/documents?limit=${encodeURIComponent($("listLimit").value)}&trashed=${encodeURIComponent(showTrash)}`);
+      currentDocuments = payload.items || [];
+      $("trashToggleButton").textContent = showTrash ? "활성 문서 보기" : "휴지통 보기";
+      renderDocuments();
+    }
+
+    async function refreshDocument(id = selectedDocumentId) {
+      ensureAuthenticated();
+      if (!id) return;
+      selectedDocumentId = id;
+      const { payload } = await fetchJson(`/api/documents/${id}`);
+      currentDetail = payload;
+      renderDetail();
+    }
+
+    async function login() {
+      const { payload } = await fetchJson("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: $("username").value, password: $("password").value }) });
+      $("authResult").textContent = json(payload);
+      await refreshSession();
+      if (currentSession?.authenticated) { await refreshHealth(); await refreshList(); await refreshReport(); }
+    }
+
+    async function logout() {
+      const { payload } = await fetchJson("/api/auth/logout", { method: "POST" });
+      $("authResult").textContent = json(payload);
+      currentDocuments = []; currentDetail = null; selectedDocumentId = "";
+      renderDocuments(); renderDetail();
+      await refreshSession();
+    }
+
+    async function uploadDocument() {
+      ensureAuthenticated();
+      const file = $("fileInput").files[0];
+      if (!file) { $("uploadResult").textContent = "먼저 파일을 선택해 주세요."; return; }
+      const form = new FormData();
+      form.set("document_type", $("documentType").value);
+      form.set("model_name", $("modelName").value);
+      form.set("file", file);
+      const response = await fetch("/api/upload", { method: "POST", body: form });
+      const payload = await response.json();
+      $("uploadResult").textContent = json(payload);
+      if (payload.document_id) { selectedDocumentId = payload.document_id; await refreshList(); await refreshDocument(payload.document_id); }
+    }
+
+    async function runDemo() {
+      ensureAuthenticated();
+      const { payload } = await fetchJson("/api/demo/enqueue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model_name: $("modelName").value || defaultOcrModel }) });
+      $("uploadResult").textContent = json(payload);
+      await refreshList();
+    }
+
+    async function saveReview() {
+      ensureAuthenticated(); if (!selectedDocumentId) return;
+      const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/review`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reviewPayload()) });
+      $("documentResult").textContent = json(payload);
+      if (ok) { currentDetail = payload; renderDetail(); await refreshList(); }
+    }
+
+    async function completeReview() {
+      ensureAuthenticated(); if (!selectedDocumentId) return;
+      const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/complete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      $("documentResult").textContent = json(payload);
+      if (ok) { currentDetail = payload; renderDetail(); await refreshList(); }
+    }
+
+    async function reprocessDocument() {
+      ensureAuthenticated(); if (!selectedDocumentId) return;
+      const { payload } = await fetchJson(`/api/documents/${selectedDocumentId}/reprocess`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model_name: $("reviewModelName").value || null }) });
+      $("documentResult").textContent = json(payload);
+      await refreshList(); await refreshDocument(selectedDocumentId);
+    }
+
+    async function deleteDocument() {
+      ensureAuthenticated(); if (!selectedDocumentId) return;
+      const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      $("documentResult").textContent = json(payload);
+      if (ok) { currentDetail = payload; renderDetail(); await refreshList(); }
+    }
+
+    async function restoreDocument() {
+      ensureAuthenticated(); if (!selectedDocumentId) return;
+      const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/restore`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      $("documentResult").textContent = json(payload);
+      if (ok) { currentDetail = payload; renderDetail(); await refreshList(); }
+    }
+
+    $("loginButton").addEventListener("click", login);
+    $("healthButton").addEventListener("click", refreshHealth);
+    $("documentsMenuButton").addEventListener("click", () => setCurrentView("documents"));
+    $("processMenuButton").addEventListener("click", () => setCurrentView("process"));
+    $("reportsMenuButton").addEventListener("click", async () => {
+      setCurrentView("reports");
+      if (currentSession?.authenticated) await refreshReport();
+    });
+    $("reportButton").addEventListener("click", refreshReport);
+    $("reportExcelButton").addEventListener("click", () => exportReport("xlsx"));
+    $("reportPdfButton").addEventListener("click", () => exportReport("pdf"));
+    $("refreshSessionButton").addEventListener("click", refreshSession);
+    $("logoutButton").addEventListener("click", logout);
+    $("uploadButton").addEventListener("click", uploadDocument);
+    $("demoButton").addEventListener("click", runDemo);
+    $("listButton").addEventListener("click", refreshList);
+    $("period1mButton").addEventListener("click", () => setPeriodFilter(1));
+    $("period3mButton").addEventListener("click", () => setPeriodFilter(3));
+    $("period6mButton").addEventListener("click", () => setPeriodFilter(6));
+    $("period12mButton").addEventListener("click", () => setPeriodFilter(12));
+    $("trashToggleButton").addEventListener("click", async () => { showTrash = !showTrash; await refreshList(); });
+    $("filterText").addEventListener("input", renderDocuments);
+    $("saveReviewButton").addEventListener("click", saveReview);
+    $("completeReviewButton").addEventListener("click", completeReview);
+    $("reprocessButton").addEventListener("click", reprocessDocument);
+    $("deleteButton").addEventListener("click", deleteDocument);
+    $("restoreButton").addEventListener("click", restoreDocument);
+    $("pollButton").addEventListener("click", async () => {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; $("pollButton").textContent = "30초 자동조회"; return; }
+      await refreshList(); if (selectedDocumentId) await refreshDocument(selectedDocumentId);
+      pollTimer = setInterval(async () => { await refreshList(); if (selectedDocumentId) await refreshDocument(selectedDocumentId); }, 3000);
+      setTimeout(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; $("pollButton").textContent = "30초 자동조회"; } }, 30000);
+      $("pollButton").textContent = "자동조회 중지";
+    });
+
+    setCurrentView("documents");
+    setPeriodFilter(1);
+    renderDocuments();
+    renderDetail();
+    refreshConfig().then(() => refreshSession()).then(async () => { if (currentSession?.authenticated) { await refreshHealth(); await refreshList(); await refreshReport(); } });
+  </script>
+</body>
+</html>

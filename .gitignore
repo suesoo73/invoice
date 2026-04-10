@@ -1,0 +1,7 @@
+typing.txt
+.claude/
+.env
+node_modules/
+.venv/
+venv/
+__pycache__/

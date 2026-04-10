@@ -1,0 +1,25 @@
+version: '2.3'
+
+services:
+  invoice-app:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run start"
+    restart: always
+    volumes:
+      - /home/suesoo/invoice-app:/app
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_BASE_URL: https://invoice.nusome.co.kr
+      WORDPRESS_JWT_LOGIN_URL: https://office.nusome.co.kr/?rest_route=/nusome-jwt/v1/login
+      WORDPRESS_JWT_VALIDATE_URL: https://office.nusome.co.kr/?rest_route=/nusome-jwt/v1/validate
+      MYSQL_HOST: 192.168.20.10
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: invoice_ocr
+      MYSQL_USER: invoice_app
+      MYSQL_PASSWORD: change_me
+      MIDDLEWARE_BASE_URL: http://192.168.20.14:8080
+      DEFAULT_OCR_MODEL: qwen3.5:9B

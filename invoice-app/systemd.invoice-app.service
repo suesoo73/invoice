@@ -1,0 +1,15 @@
+[Unit]
+Description=Invoice Web App
+After=network.target
+
+[Service]
+Type=simple
+User=suesoo
+WorkingDirectory=/home/suesoo/invoice-app
+EnvironmentFile=/home/suesoo/invoice-app/.env
+ExecStart=/usr/bin/node /home/suesoo/invoice-app/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

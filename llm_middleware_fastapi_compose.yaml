@@ -1,0 +1,14 @@
+version: '2.3'
+
+services:
+  invoice-middleware:
+    build:
+      context: /home/suesoo/invoice-middleware
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - /home/suesoo/invoice-middleware/.env
+    volumes:
+      - /home/suesoo/invoice-storage:/storage
