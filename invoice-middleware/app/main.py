@@ -1,4 +1,5 @@
 from app.api.routes.auth import router as auth_router
+from app.api.routes.local_auth import router as local_auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,5 +20,6 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/internal/auth", tags=["auth"])
+app.include_router(local_auth_router, prefix="/internal/local-auth", tags=["local-auth"])
 app.include_router(jobs_router, prefix="/internal/ocr", tags=["ocr"])
 app.include_router(reports_router, prefix="/internal/reports", tags=["reports"])

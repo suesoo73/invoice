@@ -7,7 +7,8 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const defaultOcrModel = process.env.DEFAULT_OCR_MODEL || "qwen3.5:9B";
+const defaultOcrModel = process.env.DEFAULT_OCR_MODEL || "gemma4:e4b";
+const fetchTimeoutMs = Number(process.env.APP_FETCH_TIMEOUT_MS || 20000);
 const upload = multer({ storage: multer.memoryStorage() });
 const sessions = new Map();
 const sessionTtlMs = Number(process.env.APP_SESSION_TTL_MS || 8 * 60 * 60 * 1000);
@@ -74,6 +75,19 @@ function requireSession(req, res, next) {
   return next();
 }
 
+function requireOperator(req, res, next) {
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ detail: "Authentication required" });
+  }
+  if (!session.user?.is_operator) {
+    return res.status(403).json({ detail: "Operator access required" });
+  }
+
+  req.appSession = session;
+  return next();
+}
+
 async function readApiResponse(response) {
   const text = await response.text();
   try {
@@ -90,6 +104,7 @@ async function fetchMiddleware(path, options = {}) {
   return fetch(`${process.env.MIDDLEWARE_BASE_URL}${path}`, {
     ...options,
     headers,
+    signal: options.signal || AbortSignal.timeout(fetchTimeoutMs),
   });
 }
 
@@ -105,34 +120,6 @@ async function proxyMiddlewareFile(res, path) {
     res.setHeader("Content-Disposition", disposition);
   }
   res.send(buffer);
-}
-
-async function resolveMappedUser(wpUser) {
-  const response = await fetchMiddleware(
-    `/internal/auth/resolve-user?wp_user_id=${encodeURIComponent(wpUser.id)}&email=${encodeURIComponent(wpUser.email || "")}`,
-  );
-  const payload = await readApiResponse(response);
-
-  if (!response.ok) {
-    throw new Error(payload.detail || "Mapped app user not found");
-  }
-
-  return payload.user;
-}
-
-async function fetchWordPressUser(jwtToken) {
-  if (!process.env.WORDPRESS_JWT_ME_URL) {
-    return null;
-  }
-
-  const response = await fetch(process.env.WORDPRESS_JWT_ME_URL, {
-    headers: {
-      Authorization: `Bearer ${jwtToken}`,
-    },
-  });
-
-  const payload = await readApiResponse(response);
-  return response.ok ? payload : null;
 }
 
 app.get("/api/health", async (_req, res) => {
@@ -153,9 +140,97 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.get("/api/config", (_req, res) => {
-  res.json({
-    default_ocr_model: defaultOcrModel,
+  fetchMiddleware("/internal/ocr/operator/llm-config")
+    .then(readApiResponse)
+    .then((payload) => {
+      const config = payload?.config || {};
+      res.json({
+        default_ocr_model: config.default_model || defaultOcrModel,
+        allowed_ocr_models: Array.isArray(config.allowed_models) && config.allowed_models.length
+          ? config.allowed_models
+          : [defaultOcrModel],
+        ocr_backend: config.ocr_backend || "paddleocr_vl",
+        ocr_model: config.ocr_model || "",
+        allowed_engine_models: Array.isArray(config.ocr_allowed_models) ? config.ocr_allowed_models : [],
+        ocr_models_by_backend: config.ocr_models_by_backend || {},
+        llm_backend: config.llm_backend || "ollama",
+      });
+    })
+    .catch(() => {
+      res.json({
+        default_ocr_model: defaultOcrModel,
+        allowed_ocr_models: [defaultOcrModel],
+        ocr_backend: "paddleocr_vl",
+        ocr_model: "",
+        allowed_engine_models: [],
+        ocr_models_by_backend: {},
+        llm_backend: "ollama",
+      });
+    });
+});
+
+app.get("/api/operator/overview", requireSession, async (req, res) => {
+  if (!req.appSession.user?.is_operator) {
+    return res.status(403).json({ detail: "Operator access required" });
+  }
+
+  let appHealth = { status: "error" };
+  let middlewareHealth = { status: "error" };
+  let operatorPayload = {};
+
+  try {
+    appHealth = {
+      status: "ok",
+      app: "invoice-app",
+      uptime_seconds: Math.round(process.uptime()),
+      default_ocr_model: defaultOcrModel,
+      middleware_base_url: process.env.MIDDLEWARE_BASE_URL,
+      server_time: new Date().toISOString(),
+    };
+
+    const middlewareHealthResponse = await fetch(`${process.env.MIDDLEWARE_BASE_URL}/health`);
+    middlewareHealth = await middlewareHealthResponse.json();
+
+    const overviewResponse = await fetchMiddleware("/internal/ocr/operator/overview?limit=12");
+    operatorPayload = await readApiResponse(overviewResponse);
+
+    return res.json({
+      app: appHealth,
+      middleware: middlewareHealth,
+      overview: operatorPayload,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      app: appHealth,
+      middleware: middlewareHealth,
+      detail: String(error),
+      overview: operatorPayload,
+    });
+  }
+});
+
+app.get("/api/operator/llm-config", requireOperator, async (_req, res) => {
+  const response = await fetchMiddleware("/internal/ocr/operator/llm-config");
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/operator/llm-config", requireOperator, async (req, res) => {
+  const response = await fetchMiddleware("/internal/ocr/operator/llm-config", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      llm_backend: req.body.llm_backend,
+      default_model: req.body.default_model,
+      ocr_backend: req.body.ocr_backend,
+      ocr_model: req.body.ocr_model,
+      external_llm_api_key: req.body.external_llm_api_key,
+    }),
   });
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
 });
 
 app.get("/api/auth/me", (req, res) => {
@@ -172,40 +247,34 @@ app.get("/api/auth/me", (req, res) => {
 });
 
 app.post("/api/auth/login", async (req, res) => {
-  const params = new URLSearchParams();
-  params.set("username", req.body.username || "");
-  params.set("password", req.body.password || "");
-
-  const response = await fetch(process.env.WORDPRESS_JWT_LOGIN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
-
-  const payload = await readApiResponse(response);
-  if (!response.ok || !payload?.token || !payload?.user?.id) {
-    return res.status(response.status).json(payload);
-  }
-
-  const wpUser = (await fetchWordPressUser(payload.token))?.user || payload.user;
-
   try {
-    const mappedUser = await resolveMappedUser({
-      id: wpUser.id,
-      email: wpUser.email || payload.user.email,
+    const response = await fetchMiddleware("/internal/local-auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        login_id: req.body.username || "",
+        password: req.body.password || "",
+      }),
     });
+    const payload = await readApiResponse(response);
+    if (!response.ok || !payload?.user?.id) {
+      return res.status(response.status || 502).json(payload);
+    }
+
+    const authUser = payload.user;
 
     const sessionUser = {
-      id: mappedUser.id,
-      company_id: mappedUser.company_id,
-      company_name: mappedUser.company_name,
-      company_code: mappedUser.company_code,
-      name: mappedUser.name,
-      email: mappedUser.email,
-      wp_user_id: mappedUser.wp_user_id,
-      wordpress_login: payload.user.login,
+      id: authUser.id,
+      company_id: authUser.company_id,
+      company_name: authUser.company_name,
+      company_code: authUser.company_code,
+      company_registration_no: authUser.company_registration_no,
+      name: authUser.name,
+      email: authUser.email,
+      login_id: authUser.login_id,
+      is_operator: !!authUser.is_operator,
     };
 
     const sessionToken = createSession(sessionUser);
@@ -221,10 +290,72 @@ app.post("/api/auth/login", async (req, res) => {
       user: sessionUser,
     });
   } catch (error) {
-    return res.status(403).json({
-      detail: String(error.message || error),
+    const message = String(error.message || error);
+    const isTimeout = message.includes("timed out") || message.includes("ETIMEDOUT") || message.includes("AbortError");
+    return res.status(isTimeout ? 504 : 502).json({
+      detail: `Login request failed: ${message}`,
     });
   }
+});
+
+app.get("/api/operator/users", requireOperator, async (_req, res) => {
+  const response = await fetchMiddleware("/internal/local-auth/users");
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.get("/api/operator/companies/resolve", requireOperator, async (req, res) => {
+  const companyId = String(req.query.company_id || "");
+  const response = await fetchMiddleware(
+    `/internal/local-auth/companies/resolve?company_id=${encodeURIComponent(companyId)}`,
+  );
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.get("/api/operator/companies", requireOperator, async (req, res) => {
+  const query = String(req.query.query || "");
+  const response = await fetchMiddleware(
+    `/internal/local-auth/companies?query=${encodeURIComponent(query)}`,
+  );
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/operator/companies", requireOperator, async (req, res) => {
+  const response = await fetchMiddleware("/internal/local-auth/companies", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/operator/users", requireOperator, async (req, res) => {
+  const response = await fetchMiddleware("/internal/local-auth/users", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.patch("/api/operator/users/:id", requireOperator, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/local-auth/users/${req.params.id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -293,6 +424,28 @@ app.get("/api/documents/:id", requireSession, async (req, res) => {
   res.status(response.status).json(payload);
 });
 
+app.get("/api/documents/:id/file", requireSession, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}`);
+  const payload = await readApiResponse(response);
+
+  if (payload?.document?.company_id && payload.document.company_id !== req.appSession.user.company_id) {
+    return res.status(403).json({ detail: "Forbidden" });
+  }
+
+  return proxyMiddlewareFile(res, `/internal/ocr/documents/${req.params.id}/file`);
+});
+
+app.get("/api/documents/:id/preview-image", requireSession, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}`);
+  const payload = await readApiResponse(response);
+
+  if (payload?.document?.company_id && payload.document.company_id !== req.appSession.user.company_id) {
+    return res.status(403).json({ detail: "Forbidden" });
+  }
+
+  return proxyMiddlewareFile(res, `/internal/ocr/documents/${req.params.id}/preview-image`);
+});
+
 app.get("/api/documents", requireSession, async (req, res) => {
   const limit = req.query.limit || "20";
   const trashed = req.query.trashed === "true" ? "true" : "false";
@@ -344,6 +497,58 @@ app.post("/api/documents/:id/reprocess", requireSession, async (req, res) => {
     body: JSON.stringify({
       requested_by: req.appSession.user.id,
       model_name: req.body.model_name,
+      use_grayscale: req.body.use_grayscale !== false,
+    }),
+  });
+
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/documents/:id/reprocess-fields", requireSession, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}/reprocess-fields`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requested_by: req.appSession.user.id,
+      model_name: req.body.model_name,
+    }),
+  });
+
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/documents/:id/rotate", requireSession, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}/rotate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requested_by: req.appSession.user.id,
+      degrees: req.body.degrees,
+    }),
+  });
+
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/documents/:id/crop", requireSession, async (req, res) => {
+  const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}/crop`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requested_by: req.appSession.user.id,
+      x_ratio: req.body.x_ratio,
+      y_ratio: req.body.y_ratio,
+      width_ratio: req.body.width_ratio,
+      height_ratio: req.body.height_ratio,
     }),
   });
 
@@ -385,8 +590,9 @@ app.get("/api/reports/summary", requireSession, async (req, res) => {
   const periodType = req.query.period_type || "monthly";
   const dateFrom = req.query.date_from || "";
   const dateTo = req.query.date_to || "";
+  const includeTax = req.query.include_tax ?? "true";
   const response = await fetchMiddleware(
-    `/internal/reports/summary?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`,
+    `/internal/reports/summary?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&include_tax=${encodeURIComponent(includeTax)}`,
   );
 
   const payload = await readApiResponse(response);
@@ -397,9 +603,10 @@ app.get("/api/reports/export.xlsx", requireSession, async (req, res) => {
   const periodType = req.query.period_type || "monthly";
   const dateFrom = req.query.date_from || "";
   const dateTo = req.query.date_to || "";
+  const includeTax = req.query.include_tax ?? "true";
   await proxyMiddlewareFile(
     res,
-    `/internal/reports/export.xlsx?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`,
+    `/internal/reports/export.xlsx?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&include_tax=${encodeURIComponent(includeTax)}`,
   );
 });
 
@@ -407,9 +614,10 @@ app.get("/api/reports/export.pdf", requireSession, async (req, res) => {
   const periodType = req.query.period_type || "monthly";
   const dateFrom = req.query.date_from || "";
   const dateTo = req.query.date_to || "";
+  const includeTax = req.query.include_tax ?? "true";
   await proxyMiddlewareFile(
     res,
-    `/internal/reports/export.pdf?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`,
+    `/internal/reports/export.pdf?company_id=${encodeURIComponent(req.appSession.user.company_id)}&period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&include_tax=${encodeURIComponent(includeTax)}`,
   );
 });
 

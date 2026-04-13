@@ -1,4 +1,5 @@
 from app.db.session import db_cursor
+from app.services.runtime_config_service import get_active_llm_config
 
 
 def list_documents(company_id: str, limit: int = 20, trashed: bool = False) -> list[dict]:
@@ -55,6 +56,7 @@ def get_document_detail(document_id: str) -> dict | None:
                 status,
                 original_filename,
                 file_path,
+                mime_type,
                 vendor_name,
                 vendor_reg_no,
                 buyer_name,
@@ -81,7 +83,7 @@ def get_document_detail(document_id: str) -> dict | None:
 
         cursor.execute(
             """
-            SELECT id, status, retry_count, max_retries, model_name, error_message, requested_at, started_at, completed_at
+            SELECT id, status, retry_count, max_retries, model_name, use_grayscale, error_message, requested_at, started_at, completed_at
             FROM document_jobs
             WHERE document_id = %s
             ORDER BY created_at DESC, id DESC
@@ -93,7 +95,7 @@ def get_document_detail(document_id: str) -> dict | None:
 
         cursor.execute(
             """
-            SELECT line_no, item_name, quantity, unit_price, line_amount
+            SELECT line_no, item_name, quantity, unit_price, line_amount, tax_amount, total_amount
             FROM document_items
             WHERE document_id = %s
             ORDER BY line_no ASC
@@ -117,4 +119,68 @@ def get_document_detail(document_id: str) -> dict | None:
         "job": job,
         "items": items,
         "ocr_raw": ocr_raw,
+    }
+
+
+def get_operator_overview(limit: int = 10) -> dict:
+    with db_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*) AS total_documents,
+                SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued_documents,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) AS processing_documents,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) AS review_documents,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_documents,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_documents,
+                SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) AS deleted_documents
+            FROM documents
+            """
+        )
+        document_counts = cursor.fetchone()
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*) AS total_jobs,
+                SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued_jobs,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) AS processing_jobs,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_jobs,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_jobs
+            FROM document_jobs
+            """
+        )
+        job_counts = cursor.fetchone()
+
+        cursor.execute(
+            """
+            SELECT
+                d.id AS document_id,
+                d.original_filename,
+                d.company_id,
+                d.status AS document_status,
+                d.updated_at,
+                j.id AS job_id,
+                j.status AS job_status,
+                j.retry_count,
+                j.max_retries,
+                j.model_name,
+                j.error_message,
+                j.requested_at,
+                j.started_at,
+                j.completed_at
+            FROM document_jobs j
+            JOIN documents d ON d.id = j.document_id
+            ORDER BY COALESCE(j.started_at, j.requested_at) DESC, j.id DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        recent_jobs = cursor.fetchall()
+
+    return {
+        "document_counts": document_counts,
+        "job_counts": job_counts,
+        "recent_jobs": recent_jobs,
+        "llm_config": get_active_llm_config(),
     }

@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime
 
 
 def _coerce_number(value):
@@ -28,6 +29,27 @@ def _parse_issue_date(text: str) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def coerce_issue_date(value) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    normalized = text
+    digit_match = re.search(r"(\d{4})\D?(\d{1,2})\D?(\d{1,2})", text)
+    if digit_match:
+        normalized = f"{digit_match.group(1)}-{int(digit_match.group(2)):02d}-{int(digit_match.group(3)):02d}"
+
+    try:
+        return datetime.strptime(normalized, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return datetime.now().date().isoformat()
 
 
 def _parse_items_from_text(text: str) -> list[dict]:
@@ -61,6 +83,8 @@ def _parse_items_from_text(text: str) -> list[dict]:
                 "quantity": quantity,
                 "unit_price": unit_price,
                 "line_amount": line_amount,
+                "tax_amount": None,
+                "total_amount": line_amount,
             }
         )
 
@@ -75,7 +99,7 @@ def fallback_parse_from_text(text: str) -> dict:
             "vendor_reg_no": None,
             "buyer_name": None,
             "buyer_reg_no": None,
-            "issue_date": _parse_issue_date(text),
+            "issue_date": coerce_issue_date(_parse_issue_date(text)),
             "supply_amount": _coerce_number(_find_labeled_value(text, "Supply Amount")),
             "tax_amount": _coerce_number(_find_labeled_value(text, "Tax Amount")),
             "total_amount": _coerce_number(_find_labeled_value(text, "Total Amount")),
@@ -128,6 +152,8 @@ def normalize_ocr_payload(payload: dict, raw_text: str) -> dict:
                 "quantity": _coerce_number(item.get("quantity")),
                 "unit_price": _coerce_number(item.get("unit_price")),
                 "line_amount": _coerce_number(item.get("line_amount")),
+                "tax_amount": _coerce_number(item.get("tax_amount") or item.get("vat_amount")),
+                "total_amount": _coerce_number(item.get("total_amount") or item.get("line_total_amount")),
             }
         )
 
@@ -138,7 +164,7 @@ def normalize_ocr_payload(payload: dict, raw_text: str) -> dict:
             "vendor_reg_no": fields.get("vendor_reg_no"),
             "buyer_name": fields.get("buyer_name"),
             "buyer_reg_no": fields.get("buyer_reg_no"),
-            "issue_date": fields.get("issue_date"),
+            "issue_date": coerce_issue_date(fields.get("issue_date")),
             "supply_amount": _coerce_number(fields.get("supply_amount")),
             "tax_amount": _coerce_number(fields.get("tax_amount")),
             "total_amount": _coerce_number(fields.get("total_amount")),

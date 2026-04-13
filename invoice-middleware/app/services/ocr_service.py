@@ -2,9 +2,10 @@ import os
 import re
 import subprocess
 import tempfile
+import base64
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import fitz
 import httpx
 from PIL import Image
 
@@ -15,17 +16,16 @@ from app.services.parser_service import (
     merge_with_fallback,
     normalize_ocr_payload,
 )
+from app.services.runtime_config_service import (
+    get_active_llm_config,
+    get_external_llm_api_key,
+    get_external_llm_chat_completions_url,
+)
 
-# PaddleOCR-VL에 넘기기 전 렌더링 해상도 (DPI)
-_PREPROCESS_DPI = 200
+_PREPROCESS_DPI = 400
 
 
 def _preprocess_to_grayscale(src_path: str, dst_dir: str) -> str:
-    """파일을 회색조로 변환해 dst_dir에 저장하고 경로를 반환한다.
-
-    PDF  → 각 페이지를 회색조 픽스맵으로 렌더링 후 단일 PDF로 재조합
-    이미지 → PIL로 'L' 모드 변환 후 PNG 저장
-    """
     src = Path(src_path)
     suffix = src.suffix.lower()
 
@@ -48,12 +48,10 @@ def _preprocess_to_grayscale(src_path: str, dst_dir: str) -> str:
         img.save(dst_path)
         return dst_path
 
-    # 지원하지 않는 형식은 원본 그대로 사용
     return src_path
 
 
 def _strip_html_for_llm(text: str, max_chars: int = 6000) -> str:
-    """HTML 태그 제거 후 Ollama에 넘길 플레인 텍스트로 변환한다."""
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"&amp;", "&", text)
     text = re.sub(r"&lt;", "<", text)
@@ -63,18 +61,13 @@ def _strip_html_for_llm(text: str, max_chars: int = 6000) -> str:
     return text.strip()[:max_chars]
 
 
-def _run_paddleocr_vl(file_path: str) -> str:
-    """PaddleOCR-VL subprocess를 실행해 마크다운 텍스트를 반환한다.
-    GPU 0 전용 (CUDA_VISIBLE_DEVICES=0).
-    전처리: 입력 파일을 회색조로 변환 후 PaddleOCR-VL에 전달한다.
-    """
+def _run_paddleocr_vl(file_path: str, use_grayscale: bool = True) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
-        # 회색조 전처리
-        gray_path = _preprocess_to_grayscale(file_path, tmpdir)
+        prepared_path = _preprocess_to_grayscale(file_path, tmpdir) if use_grayscale else file_path
         cmd = [
             settings.paddleocr_vl_bin,
             "doc_parser",
-            "-i", gray_path,
+            "-i", prepared_path,
             "--save_path", tmpdir,
             "--device", settings.paddleocr_vl_device,
             "--vl_rec_model_name", settings.paddleocr_vl_model,
@@ -86,14 +79,14 @@ def _run_paddleocr_vl(file_path: str) -> str:
         ]
         env = os.environ.copy()
         env["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
-        env["CUDA_VISIBLE_DEVICES"] = "0"  # GPU 0 전용
+        env["CUDA_VISIBLE_DEVICES"] = "0"
 
         result = subprocess.run(
             cmd,
             env=env,
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=settings.paddleocr_vl_timeout_seconds,
         )
         if result.returncode != 0:
             raise RuntimeError(
@@ -107,18 +100,85 @@ def _run_paddleocr_vl(file_path: str) -> str:
         return "\n\n".join(f.read_text(encoding="utf-8") for f in md_files)
 
 
+def _encode_image_to_base64(image_path: str) -> str:
+    return base64.b64encode(Path(image_path).read_bytes()).decode("ascii")
+
+
+def _render_pdf_pages_for_glm(file_path: str, dst_dir: str, use_grayscale: bool) -> list[str]:
+    image_paths: list[str] = []
+    with fitz.open(file_path) as doc:
+        page_count = min(doc.page_count, settings.ocr_max_pdf_pages)
+        for index in range(page_count):
+            page = doc.load_page(index)
+            pix = page.get_pixmap(
+                colorspace=fitz.csGRAY if use_grayscale else fitz.csRGB,
+                dpi=_PREPROCESS_DPI,
+                alpha=False,
+            )
+            page_path = str(Path(dst_dir) / f"glm_page_{index + 1}.jpg")
+            pix.save(page_path)
+            image_paths.append(page_path)
+    return image_paths
+
+
+def _run_glm_ocr_on_images(image_paths: list[str]) -> tuple[str, dict]:
+    responses = []
+    page_texts = []
+    for index, image_path in enumerate(image_paths, start=1):
+        request_payload = {
+            "model": get_active_llm_config().get("ocr_model") or settings.glm_ocr_model,
+            "prompt": "Read this Korean transaction statement image and return the OCR text in markdown.",
+            "stream": False,
+            "images": [_encode_image_to_base64(image_path)],
+            "options": {"temperature": 0},
+        }
+        response = httpx.post(
+            f"{settings.ollama_base_url}/api/generate",
+            json=request_payload,
+            timeout=settings.ollama_timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        responses.append(payload)
+        text = (payload.get("response") or "").strip()
+        if len(image_paths) > 1:
+            page_texts.append(f"## Page {index}\n{text}")
+        else:
+            page_texts.append(text)
+    return "\n\n".join(page_texts).strip(), {"pages": responses}
+
+
+def _run_glm_ocr(file_path: str, use_grayscale: bool = True) -> tuple[str, dict]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        suffix = Path(file_path).suffix.lower()
+        if suffix == ".pdf":
+            image_paths = _render_pdf_pages_for_glm(file_path, tmpdir, use_grayscale)
+        elif suffix in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}:
+            prepared_path = _preprocess_to_grayscale(file_path, tmpdir) if use_grayscale else file_path
+            image_paths = [prepared_path]
+        else:
+            raise RuntimeError("GLM-OCR supports only PDF or image inputs")
+        if not image_paths:
+            raise RuntimeError("GLM-OCR produced no page images")
+        return _run_glm_ocr_on_images(image_paths)
+
+
 def _build_system_prompt(document_type: str) -> str:
     return (
-        f'You are a JSON extraction engine for Korean {document_type} documents. '
-        'Output ONLY a JSON object — no explanation, no markdown fences, no extra keys. '
-        'Follow the exact schema the user provides. '
-        'Korean field mappings: '
-        '공급자/공급하는자/판매자/상호(왼쪽)→vendor_name, 공급자사업자번호→vendor_reg_no, '
-        '공급받는자/구매자/상호(오른쪽)→buyer_name, 공급받는자사업자번호→buyer_reg_no, '
-        '작성일/거래일자/발행일→issue_date, '
-        '공급가액→supply_amount, 세액→tax_amount, 합계금액/합계→total_amount, '
-        '품목/상품명→item_name, 수량→quantity, 단가→unit_price, 금액→line_amount. '
-        'Strip commas/hyphens/currency symbols from numbers. Use null for missing values. Currency default KRW.'
+        f"You are a JSON extraction engine for Korean {document_type} documents. "
+        "Output ONLY one JSON object with no explanation, no markdown fences, and no extra keys. "
+        "Follow the exact schema the user provides. "
+        "This OCR text often contains HTML tables from Korean transaction statements. "
+        "Use table structure and left/right column position, not only nearby words. "
+        "For the top party-information table, treat the LEFT block as seller/vendor and the RIGHT block as buyer/customer unless the text clearly contradicts that. "
+        "When labels like 사업자번호 or 상호 appear twice in the same row, the left value maps to vendor fields and the right value maps to buyer fields. "
+        "Map fields as follows: vendor_name=공급하는자/판매자/좌측 상호, vendor_reg_no=좌측 사업자번호, buyer_name=공급받는자/구매자/우측 상호, buyer_reg_no=우측 사업자번호. "
+        "Do not confuse 성명 with company name. 성명 is a person name and should not replace vendor_name or buyer_name. "
+        "For 거래일자-NO, split the date-like part into issue_date and the trailing number-like part into invoice_number when possible. "
+        "For item rows, use the repeating columns 순번, 품목 및 규격, 수량, 단가, 금액/공급가액. "
+        "Strip commas, hyphens, spaces, and currency symbols from numeric values, but preserve hyphen format for business registration numbers. "
+        "Use null for missing values. Default currency is KRW. "
+        "If the OCR text contains enough evidence in the table, prefer that evidence over generic assumptions."
     )
 
 
@@ -126,61 +186,125 @@ def _build_user_prompt(document_type: str, ocr_text: str) -> str:
     return (
         f"Korean {document_type} OCR text:\n\n"
         f"{ocr_text}\n\n"
+        "Extraction rules:\n"
+        "- Read the top table as party information first.\n"
+        "- Left-side 사업자번호/상호 belongs to vendor fields.\n"
+        "- Right-side 사업자번호/상호 belongs to buyer fields.\n"
+        "- Ignore 성명 unless no company name exists.\n"
+        "- If 공급가액/세액/합계금액 are not explicitly labeled, leave them null rather than guessing from totals unless the document clearly shows a final total row.\n"
+        "- Extract every item row that has 순번 and 품목 및 규격.\n"
+        "- issue_date must be YYYY-MM-DD.\n"
+        "- vendor_reg_no and buyer_reg_no should keep business-number formatting like 000-00-00000 when present.\n\n"
         "Return this JSON and nothing else:\n"
         '{"fields":{"vendor_name":null,"vendor_reg_no":null,"buyer_name":null,"buyer_reg_no":null,'
         '"issue_date":null,"supply_amount":null,'
         '"tax_amount":null,"total_amount":null,"currency":"KRW",'
         '"payment_method":null,"invoice_number":null,"receipt_number":null},'
-        '"items":[{"line_no":1,"item_name":"","quantity":null,"unit_price":null,"line_amount":null}]}'
+        '"items":[{"line_no":1,"item_name":"","quantity":null,"unit_price":null,"line_amount":null,"tax_amount":null,"total_amount":null}]}'
     )
 
 
 def _extract_fields_with_ollama(
     *, model_name: str, document_type: str, ocr_text: str
 ) -> tuple[dict, dict]:
-    """OCR 텍스트를 Ollama에 보내 구조화된 필드를 추출한다.
-    Ollama는 GPU 1 전용 (systemd CUDA_VISIBLE_DEVICES=1).
-    """
     clean_text = _strip_html_for_llm(ocr_text)
     request_payload = {
         "model": model_name,
         "system": _build_system_prompt(document_type),
         "prompt": _build_user_prompt(document_type, clean_text),
         "stream": False,
+        "keep_alive": settings.ollama_keep_alive_value,
         "think": False,
         "options": {"num_predict": 1500},
     }
     response = httpx.post(
         f"{settings.ollama_base_url}/api/generate",
         json=request_payload,
-        timeout=300,
+        timeout=settings.ollama_timeout_seconds,
     )
     response.raise_for_status()
     llm_payload = response.json()
     model_response = llm_payload.get("response", "")
     parsed = normalize_ocr_payload(extract_json_block(model_response), raw_text=ocr_text)
-    parsed["raw_text"] = ocr_text  # 항상 PaddleOCR-VL 원문 사용
+    parsed["raw_text"] = ocr_text
     return parsed, llm_payload
 
 
-def run_ocr_with_model(*, model_name: str, file_path: str, document_type: str) -> dict:
-    """
-    2단계 병렬 가능 OCR 파이프라인:
-      1. PaddleOCR-VL (GPU 0) → 고정밀 마크다운 텍스트
-      2. Ollama qwen3.5:9B (GPU 1) → 구조화된 필드 추출
-    두 모델이 별도 GPU를 사용하므로 충돌 없음.
-    """
-    # 1단계: PaddleOCR-VL (GPU 0)
-    ocr_text = _run_paddleocr_vl(file_path)
+def _extract_fields_with_external_api(
+    *, model_name: str, document_type: str, ocr_text: str
+) -> tuple[dict, dict]:
+    clean_text = _strip_html_for_llm(ocr_text)
+    headers = {"Content-Type": "application/json"}
+    actual_api_key = get_external_llm_api_key()
+    if actual_api_key:
+        headers["Authorization"] = f"Bearer {actual_api_key}"
 
-    # 2단계: Ollama 필드 추출 (GPU 1)
-    parsed, llm_payload = _extract_fields_with_ollama(
+    request_payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": _build_system_prompt(document_type)},
+            {"role": "user", "content": _build_user_prompt(document_type, clean_text)},
+        ],
+        "temperature": 0,
+        "max_tokens": 1800,
+    }
+    response = httpx.post(
+        get_external_llm_chat_completions_url(),
+        json=request_payload,
+        headers=headers,
+        timeout=settings.external_llm_timeout_seconds,
+    )
+    response.raise_for_status()
+    llm_payload = response.json()
+    model_response = (
+        llm_payload.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content", "")
+    )
+    if isinstance(model_response, list):
+        model_response = "\n".join(
+            part.get("text", "")
+            for part in model_response
+            if isinstance(part, dict)
+        )
+    parsed = normalize_ocr_payload(extract_json_block(model_response), raw_text=ocr_text)
+    parsed["raw_text"] = ocr_text
+    return parsed, llm_payload
+
+
+def extract_fields_with_llm(
+    *, model_name: str, document_type: str, ocr_text: str
+) -> tuple[dict, dict]:
+    active_config = get_active_llm_config()
+    if active_config["llm_backend"] == "external_api":
+        return _extract_fields_with_external_api(
+            model_name=model_name,
+            document_type=document_type,
+            ocr_text=ocr_text,
+        )
+    return _extract_fields_with_ollama(
         model_name=model_name,
         document_type=document_type,
         ocr_text=ocr_text,
     )
 
-    # 폴백 파서로 보완
+
+def run_ocr_with_model(*, model_name: str, file_path: str, document_type: str, use_grayscale: bool = True) -> dict:
+    active_config = get_active_llm_config()
+    ocr_backend = active_config.get("ocr_backend") or settings.ocr_backend
+    ocr_model = active_config.get("ocr_model") or settings.default_ocr_model
+    if ocr_backend == "glm_ocr":
+        ocr_text, ocr_payload = _run_glm_ocr(file_path, use_grayscale=use_grayscale)
+    else:
+        ocr_text = _run_paddleocr_vl(file_path, use_grayscale=use_grayscale)
+        ocr_payload = {"engine": "paddleocr_vl", "model": settings.paddleocr_vl_model}
+
+    parsed, llm_payload = extract_fields_with_llm(
+        model_name=model_name,
+        document_type=document_type,
+        ocr_text=ocr_text,
+    )
+
     parsed = merge_with_fallback(parsed, fallback_parse_from_text(ocr_text))
 
     return {
@@ -189,4 +313,8 @@ def run_ocr_with_model(*, model_name: str, file_path: str, document_type: str) -
         "fields": parsed["fields"],
         "items": parsed["items"],
         "llm_response_json": llm_payload,
+        "ocr_response_json": ocr_payload,
+        "ocr_backend": ocr_backend,
+        "ocr_model": ocr_model,
+        "use_grayscale": use_grayscale,
     }

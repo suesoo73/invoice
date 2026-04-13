@@ -10,6 +10,7 @@ class OCRJobCreate(BaseModel):
     document_type: str
     requested_by: str | None = None
     model_name: str | None = None
+    use_grayscale: bool = True
 
 
 class OCRJobResponse(BaseModel):
@@ -39,6 +40,8 @@ class DocumentItemInput(BaseModel):
     quantity: float | None = None
     unit_price: float | None = None
     line_amount: float | None = None
+    tax_amount: float | None = None
+    total_amount: float | None = None
 
 
 class DocumentReviewUpdate(BaseModel):
@@ -64,3 +67,31 @@ class DocumentReprocessRequest(BaseModel):
 
     requested_by: str
     model_name: str | None = None
+    use_grayscale: bool = True
+
+
+class DocumentRotateRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    requested_by: str
+    degrees: int
+
+
+class DocumentCropRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    requested_by: str
+    x_ratio: float
+    y_ratio: float
+    width_ratio: float
+    height_ratio: float
+
+
+class OperatorLLMBackendUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    llm_backend: str
+    default_model: str | None = None
+    ocr_backend: str | None = None
+    ocr_model: str | None = None
+    external_llm_api_key: str | None = None

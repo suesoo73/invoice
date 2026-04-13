@@ -13,24 +13,30 @@ create table companies (
     id char(36) not null primary key,
     name varchar(200) not null,
     code varchar(100) not null,
+    registration_no varchar(12) null,
     status enum('active', 'inactive') not null default 'active',
     created_at datetime not null default current_timestamp,
     updated_at datetime not null default current_timestamp on update current_timestamp,
-    unique key uk_companies_code (code)
+    unique key uk_companies_code (code),
+    unique key uk_companies_registration_no (registration_no)
 ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table users (
     id char(36) not null primary key,
     company_id char(36) not null,
     wp_user_id bigint not null,
+    login_id varchar(100) null,
+    password_hash varchar(255) null,
     email varchar(255) not null,
     name varchar(150) not null,
+    is_operator tinyint(1) not null default 0,
     status enum('active', 'inactive') not null default 'active',
     last_login_at datetime null,
     created_at datetime not null default current_timestamp,
     updated_at datetime not null default current_timestamp on update current_timestamp,
     unique key uk_users_company_wp_user (company_id, wp_user_id),
     unique key uk_users_company_email (company_id, email),
+    unique key uk_users_login_id (login_id),
     key idx_users_company_id (company_id),
     constraint fk_users_company foreign key (company_id) references companies(id)
 ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
@@ -40,7 +46,7 @@ create table documents (
     company_id char(36) not null,
     created_by char(36) not null,
     type enum('invoice', 'receipt') not null,
-    status enum('uploaded', 'processing', 'review', 'completed', 'failed', 'deleted') not null,
+    status enum('uploaded', 'queued', 'processing', 'review', 'completed', 'failed', 'deleted') not null,
     original_filename varchar(255) not null,
     file_path text not null,
     file_size bigint not null,
@@ -83,6 +89,8 @@ create table document_items (
     quantity decimal(15, 3) null,
     unit_price decimal(15, 2) null,
     line_amount decimal(15, 2) null,
+    tax_amount decimal(15, 2) null,
+    total_amount decimal(15, 2) null,
     created_at datetime not null default current_timestamp,
     updated_at datetime not null default current_timestamp on update current_timestamp,
     unique key uk_document_items_document_line (document_id, line_no),
@@ -113,6 +121,7 @@ create table document_jobs (
     error_message text null,
     requested_by char(36) null,
     model_name varchar(100) null,
+    use_grayscale tinyint(1) not null default 1,
     requested_at datetime not null default current_timestamp,
     started_at datetime null,
     completed_at datetime null,

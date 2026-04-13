@@ -13,6 +13,7 @@ def report_summary(
     period_type: str = "monthly",
     date_from: str | None = None,
     date_to: str | None = None,
+    include_tax: bool = True,
     _: None = Depends(verify_internal_token),
 ) -> dict:
     try:
@@ -21,6 +22,7 @@ def report_summary(
             period_type=period_type,
             date_from=date_from,
             date_to=date_to,
+            include_tax=include_tax,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -32,6 +34,7 @@ def export_xlsx(
     period_type: str = "monthly",
     date_from: str | None = None,
     date_to: str | None = None,
+    include_tax: bool = True,
     _: None = Depends(verify_internal_token),
 ):
     try:
@@ -40,6 +43,7 @@ def export_xlsx(
             period_type=period_type,
             date_from=date_from,
             date_to=date_to,
+            include_tax=include_tax,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -57,6 +61,7 @@ def export_pdf(
     period_type: str = "monthly",
     date_from: str | None = None,
     date_to: str | None = None,
+    include_tax: bool = True,
     _: None = Depends(verify_internal_token),
 ):
     try:
@@ -65,6 +70,7 @@ def export_pdf(
             period_type=period_type,
             date_from=date_from,
             date_to=date_to,
+            include_tax=include_tax,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

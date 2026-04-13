@@ -6,8 +6,10 @@ import uuid
 from app.core.config import settings
 from app.db.session import db_cursor
 from app.services.audit_service import insert_audit_log
+from app.services.document_service import _sum_document_amounts
 from app.services.job_service import resolve_model_name
 from app.services.ocr_service import run_ocr_with_model
+from app.services.parser_service import coerce_issue_date
 
 logger = logging.getLogger("invoice_middleware.worker")
 logging.basicConfig(
@@ -58,7 +60,7 @@ def reset_stale_processing_jobs() -> int:
                 SET status = %s, updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s
                 """,
-                ("uploaded" if should_retry else "failed", job["document_id"]),
+                ("queued" if should_retry else "failed", job["document_id"]),
             )
 
             logger.warning(
@@ -84,6 +86,7 @@ def fetch_next_job():
                 j.max_retries,
                 j.requested_by,
                 j.model_name,
+                j.use_grayscale,
                 d.company_id,
                 d.file_path,
                 d.type
@@ -117,6 +120,15 @@ def fetch_next_job():
             (job["id"],),
         )
 
+        cursor.execute(
+            """
+            UPDATE documents
+            SET status = 'processing', updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (job["document_id"],),
+        )
+
         return job
 
 
@@ -129,6 +141,11 @@ def complete_job(job: dict, ocr_result: dict) -> None:
             "item_count": len(ocr_result["items"]),
         },
     )
+    supply_amount, tax_amount, total_amount = _sum_document_amounts(
+        ocr_result["items"],
+        ocr_result["fields"],
+    )
+    safe_issue_date = coerce_issue_date(ocr_result["fields"].get("issue_date"))
     with db_cursor(dictionary=True) as (_, cursor):
         cursor.execute(
             """
@@ -153,7 +170,10 @@ def complete_job(job: dict, ocr_result: dict) -> None:
         cursor.execute(
             """
             UPDATE document_jobs
-            SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            SET status = 'completed',
+                error_message = NULL,
+                completed_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
             """,
             (job["id"],),
@@ -165,6 +185,9 @@ def complete_job(job: dict, ocr_result: dict) -> None:
             SET
                 status = 'review',
                 vendor_name = %s,
+                vendor_reg_no = %s,
+                buyer_name = %s,
+                buyer_reg_no = %s,
                 issue_date = %s,
                 supply_amount = %s,
                 tax_amount = %s,
@@ -178,10 +201,13 @@ def complete_job(job: dict, ocr_result: dict) -> None:
             """,
             (
                 ocr_result["fields"]["vendor_name"],
-                ocr_result["fields"]["issue_date"],
-                ocr_result["fields"]["supply_amount"],
-                ocr_result["fields"]["tax_amount"],
-                ocr_result["fields"]["total_amount"],
+                ocr_result["fields"]["vendor_reg_no"],
+                ocr_result["fields"]["buyer_name"],
+                ocr_result["fields"]["buyer_reg_no"],
+                safe_issue_date,
+                supply_amount,
+                tax_amount,
+                total_amount,
                 ocr_result["fields"]["currency"],
                 ocr_result["fields"]["payment_method"],
                 ocr_result["fields"]["invoice_number"],
@@ -199,8 +225,8 @@ def complete_job(job: dict, ocr_result: dict) -> None:
             cursor.execute(
                 """
                 INSERT INTO document_items (
-                    id, document_id, line_no, item_name, quantity, unit_price, line_amount
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    id, document_id, line_no, item_name, quantity, unit_price, line_amount, tax_amount, total_amount
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     str(uuid.uuid4()),
@@ -210,6 +236,8 @@ def complete_job(job: dict, ocr_result: dict) -> None:
                     item["quantity"],
                     item["unit_price"],
                     item["line_amount"],
+                    item.get("tax_amount"),
+                    item.get("total_amount") if item.get("total_amount") is not None else (item.get("line_amount") or 0) + (item.get("tax_amount") or 0),
                 ),
             )
 
@@ -223,6 +251,7 @@ def complete_job(job: dict, ocr_result: dict) -> None:
                 "job_id": job["id"],
                 "model_name": ocr_result["model_name"],
                 "item_count": len(ocr_result["items"]),
+                "use_grayscale": ocr_result.get("use_grayscale", True),
             },
         )
 
@@ -236,7 +265,7 @@ def fail_job(job: dict, error_message: str) -> None:
             "job_id": job["id"],
             "document_id": job["document_id"],
             "retry_count": next_retry_count,
-            "model_name": job.get("model_name") or settings.ollama_model,
+            "model_name": job.get("model_name") or settings.default_llm_model,
         },
     )
 
@@ -267,7 +296,7 @@ def fail_job(job: dict, error_message: str) -> None:
             SET status = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
             """,
-            ("processing" if should_retry else "failed", job["document_id"]),
+            ("queued" if should_retry else "failed", job["document_id"]),
         )
 
         insert_audit_log(
@@ -280,7 +309,7 @@ def fail_job(job: dict, error_message: str) -> None:
                 "job_id": job["id"],
                 "retry_count": next_retry_count,
                 "error_message": error_message[:500],
-                "model_name": job.get("model_name") or settings.ollama_model,
+                "model_name": job.get("model_name") or settings.default_llm_model,
             },
         )
 
@@ -305,6 +334,7 @@ def process_next_job() -> bool:
             model_name=model_name,
             file_path=job["file_path"],
             document_type=job["type"],
+            use_grayscale=bool(job.get("use_grayscale", 1)),
         )
         logger.info(
             "Finished OCR model call",

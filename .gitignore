@@ -5,3 +5,5 @@ node_modules/
 .venv/
 venv/
 __pycache__/
+.runtime-config.json
+_tmp_*
