@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 
 from app.core.config import settings
 from app.db.session import db_cursor
@@ -93,7 +94,7 @@ def fetch_next_job():
             FROM document_jobs j
             JOIN documents d ON d.id = j.document_id
             WHERE j.status = 'queued'
-            ORDER BY j.requested_at ASC
+            ORDER BY COALESCE(j.requested_at, j.created_at) ASC, j.id ASC
             LIMIT 1
             """
         )
@@ -130,6 +131,57 @@ def fetch_next_job():
         )
 
         return job
+
+
+def has_queued_job() -> bool:
+    with db_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            """
+            SELECT 1
+            FROM document_jobs
+            WHERE status = 'queued'
+            LIMIT 1
+            """
+        )
+        return cursor.fetchone() is not None
+
+
+def get_last_ocr_finish_time() -> datetime | None:
+    with db_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            """
+            SELECT MAX(finished_at) AS last_finished_at
+            FROM (
+                SELECT completed_at AS finished_at
+                FROM document_jobs
+                WHERE completed_at IS NOT NULL
+
+                UNION ALL
+
+                SELECT updated_at AS finished_at
+                FROM document_jobs
+                WHERE status = 'queued'
+                  AND error_message IS NOT NULL
+            ) AS job_finishes
+            """
+        )
+        row = cursor.fetchone() or {}
+        return row.get("last_finished_at")
+
+
+def wait_for_ocr_gap(min_gap_seconds: int = 60) -> None:
+    last_finished_at = get_last_ocr_finish_time()
+    if not last_finished_at:
+        return
+
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    elapsed_seconds = (now_utc - last_finished_at).total_seconds()
+    wait_seconds = max(0.0, min_gap_seconds - elapsed_seconds)
+    if wait_seconds <= 0:
+        return
+
+    logger.info("Waiting %.1f seconds before next OCR job", wait_seconds)
+    time.sleep(wait_seconds)
 
 
 def complete_job(job: dict, ocr_result: dict) -> None:
@@ -315,6 +367,10 @@ def fail_job(job: dict, error_message: str) -> None:
 
 
 def process_next_job() -> bool:
+    if not has_queued_job():
+        return False
+
+    wait_for_ocr_gap()
     job = fetch_next_job()
     if not job:
         return False

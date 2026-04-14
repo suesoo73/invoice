@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -15,9 +15,25 @@ from app.db.session import db_cursor
 from app.schemas.jobs import DocumentReviewUpdate
 from app.services.audit_service import insert_audit_log
 from app.services.job_service import resolve_model_name
-from app.services.ocr_service import extract_fields_with_llm
+from app.services.ocr_service import compare_ocr_engines, extract_fields_with_llm
 from app.services.parser_service import coerce_issue_date, fallback_parse_from_text, merge_with_fallback
 from app.services.query_service import get_document_detail
+
+
+def _normalize_upload_filename(filename: str | None) -> str:
+    original = (filename or "").strip()
+    if not original:
+        return "upload.bin"
+
+    if any(char in original for char in "ÃÂÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîï"):
+        try:
+            recovered = original.encode("latin1").decode("utf-8").strip()
+            if recovered:
+                return recovered
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+
+    return original
 
 
 def _storage_path(filename: str) -> str:
@@ -28,6 +44,20 @@ def _storage_path(filename: str) -> str:
     return str(target_dir / safe_name)
 
 
+def _coerce_requested_at(value: str | None) -> datetime | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError("Invalid requested_at") from exc
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
 def create_document_and_queue_job(
     *,
     company_id: str,
@@ -35,11 +65,14 @@ def create_document_and_queue_job(
     document_type: str,
     model_name: str | None,
     upload_file: UploadFile,
+    requested_at: str | None = None,
 ) -> dict:
     chosen_model = resolve_model_name(model_name)
     document_id = str(uuid.uuid4())
     job_id = str(uuid.uuid4())
-    stored_file_path = _storage_path(upload_file.filename or "upload.bin")
+    safe_original_filename = _normalize_upload_filename(upload_file.filename)
+    stored_file_path = _storage_path(safe_original_filename)
+    requested_at_value = _coerce_requested_at(requested_at)
 
     with open(stored_file_path, "wb") as target:
         shutil.copyfileobj(upload_file.file, target)
@@ -74,7 +107,7 @@ def create_document_and_queue_job(
                 company_id,
                 requested_by,
                 document_type,
-                upload_file.filename or "upload.bin",
+                safe_original_filename,
                 stored_file_path,
                 file_size,
                 mime_type,
@@ -84,10 +117,10 @@ def create_document_and_queue_job(
         cursor.execute(
             """
             INSERT INTO document_jobs (
-                id, document_id, job_type, status, retry_count, max_retries, requested_by, model_name, use_grayscale
-            ) VALUES (%s, %s, 'ocr', 'queued', 0, %s, %s, %s, %s)
+                id, document_id, job_type, status, retry_count, max_retries, requested_by, model_name, use_grayscale, requested_at
+            ) VALUES (%s, %s, 'ocr', 'queued', 0, %s, %s, %s, %s, COALESCE(%s, CURRENT_TIMESTAMP))
             """,
-            (job_id, document_id, settings.ocr_max_retries, requested_by, chosen_model, True),
+            (job_id, document_id, settings.ocr_max_retries, requested_by, chosen_model, True, requested_at_value),
         )
 
         insert_audit_log(
@@ -99,9 +132,10 @@ def create_document_and_queue_job(
             payload={
                 "job_id": job_id,
                 "stored_file_path": stored_file_path,
-                "original_filename": upload_file.filename,
+                "original_filename": safe_original_filename,
                 "model_name": chosen_model,
                 "use_grayscale": True,
+                "requested_at": requested_at_value.isoformat(sep=" ") if requested_at_value else None,
             },
         )
 
@@ -117,6 +151,7 @@ def create_document_and_queue_job(
                 "document_type": document_type,
                 "model_name": chosen_model,
                 "use_grayscale": True,
+                "requested_at": requested_at_value.isoformat(sep=" ") if requested_at_value else None,
             },
         )
 
@@ -126,7 +161,62 @@ def create_document_and_queue_job(
         "status": "queued",
         "stored_file_path": stored_file_path,
         "model_name": chosen_model,
+        "requested_at": requested_at_value.isoformat(sep=" ") if requested_at_value else None,
     }
+
+
+def create_manual_document(
+    *,
+    company_id: str,
+    requested_by: str,
+    document_type: str,
+    original_filename: str | None,
+) -> dict:
+    document_id = str(uuid.uuid4())
+    manual_name = (original_filename or "").strip() or f"수기입력-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    with db_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            "SELECT id FROM companies WHERE id = %s",
+            (company_id,),
+        )
+        if not cursor.fetchone():
+            raise ValueError("Company not found")
+
+        _validate_user_in_company(cursor, requested_by, company_id)
+
+        cursor.execute(
+            """
+            INSERT INTO documents (
+                id, company_id, created_by, type, status, original_filename,
+                file_path, file_size, mime_type, currency
+            ) VALUES (%s, %s, %s, %s, 'review', %s, %s, %s, %s, 'KRW')
+            """,
+            (
+                document_id,
+                company_id,
+                requested_by,
+                document_type,
+                manual_name,
+                "",
+                0,
+                "manual/entry",
+            ),
+        )
+
+        insert_audit_log(
+            cursor,
+            company_id=company_id,
+            document_id=document_id,
+            user_id=requested_by,
+            action="manual_document_created",
+            payload={
+                "original_filename": manual_name,
+                "document_type": document_type,
+            },
+        )
+
+    return get_document_detail(document_id) or {"document_id": document_id}
 
 
 def _validate_user_in_company(cursor, requested_by: str, company_id: str) -> None:
@@ -318,9 +408,42 @@ def reextract_document_fields(document_id: str, requested_by: str, model_name: s
     return refreshed
 
 
-def _rotate_image_file(file_path: str, mime_type: str | None, degrees: int) -> None:
+def compare_document_ocr(
+    document_id: str,
+    requested_by: str,
+    model_name: str | None,
+    use_grayscale: bool,
+) -> dict:
+    detail = get_document_detail(document_id)
+    if not detail:
+        raise ValueError("Document not found")
+
+    document = detail["document"]
+    chosen_model = resolve_model_name(model_name)
+
+    with db_cursor(dictionary=True) as (_, cursor):
+        _validate_user_in_company(cursor, requested_by, document["company_id"])
+
+    comparison = compare_ocr_engines(
+        model_name=chosen_model,
+        file_path=document["file_path"],
+        document_type=document["type"],
+        use_grayscale=use_grayscale,
+    )
+    return {
+        "document": {
+            "id": document["id"],
+            "original_filename": document["original_filename"],
+            "type": document["type"],
+            "status": document["status"],
+        },
+        "comparison": comparison,
+    }
+
+
+def _rotate_image_file(file_path: str, mime_type: str | None, degrees: float) -> None:
     with Image.open(file_path) as image:
-        rotated = image.rotate(-degrees, expand=True)
+        rotated = image.rotate(-degrees, expand=True, resample=Image.Resampling.BICUBIC, fillcolor="white")
         save_format = image.format or ("PNG" if (mime_type or "").lower() == "image/png" else "JPEG")
         rotated.save(file_path, format=save_format)
 
@@ -416,10 +539,8 @@ def render_document_preview_image(file_path: str, mime_type: str | None) -> byte
         preview_path.unlink(missing_ok=True)
 
 
-def rotate_document_file(document_id: str, requested_by: str, degrees: int) -> dict:
-    normalized = degrees % 360
-    if normalized not in (90, 180, 270):
-        raise ValueError("Rotation must be one of 90, 180, 270")
+def rotate_document_file(document_id: str, requested_by: str, degrees: float) -> dict:
+    normalized = float(degrees) % 360
 
     with db_cursor(dictionary=True) as (_, cursor):
         cursor.execute(
@@ -442,7 +563,10 @@ def rotate_document_file(document_id: str, requested_by: str, degrees: int) -> d
             raise ValueError("Document file not found")
 
         if mime_type == "application/pdf" or file_path.lower().endswith(".pdf"):
-            _rotate_pdf_file(file_path, normalized)
+            rounded = int(round(normalized)) % 360
+            if rounded not in (90, 180, 270):
+                raise ValueError("PDF rotation supports only 90, 180, 270 degrees")
+            _rotate_pdf_file(file_path, rounded)
         elif mime_type.startswith("image/"):
             _rotate_image_file(file_path, mime_type, normalized)
         else:

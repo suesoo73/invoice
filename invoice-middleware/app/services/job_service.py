@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from app.core.config import settings
 from app.db.session import db_cursor
@@ -22,6 +23,14 @@ def resolve_model_name(model_name: str | None) -> str:
 
 def enqueue_ocr_job(payload: OCRJobCreate) -> dict:
     model_name = resolve_model_name(payload.model_name)
+    requested_at_value = None
+    if payload.requested_at:
+        try:
+            requested_at_value = datetime.fromisoformat(payload.requested_at.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("Invalid requested_at") from exc
+        if requested_at_value.tzinfo is not None:
+            requested_at_value = requested_at_value.astimezone(timezone.utc).replace(tzinfo=None)
 
     with db_cursor(dictionary=True) as (_, cursor):
         cursor.execute(
@@ -45,10 +54,10 @@ def enqueue_ocr_job(payload: OCRJobCreate) -> dict:
         cursor.execute(
             """
             INSERT INTO document_jobs (
-                id, document_id, job_type, status, retry_count, max_retries, requested_by, model_name, use_grayscale
-            ) VALUES (%s, %s, 'ocr', 'queued', 0, %s, %s, %s, %s)
+                id, document_id, job_type, status, retry_count, max_retries, requested_by, model_name, use_grayscale, requested_at
+            ) VALUES (%s, %s, 'ocr', 'queued', 0, %s, %s, %s, %s, COALESCE(%s, CURRENT_TIMESTAMP))
             """,
-            (job_id, payload.document_id, settings.ocr_max_retries, payload.requested_by, model_name, payload.use_grayscale),
+            (job_id, payload.document_id, settings.ocr_max_retries, payload.requested_by, model_name, payload.use_grayscale, requested_at_value),
         )
 
         cursor.execute(
@@ -72,6 +81,7 @@ def enqueue_ocr_job(payload: OCRJobCreate) -> dict:
                 "document_type": payload.document_type,
                 "model_name": model_name,
                 "use_grayscale": payload.use_grayscale,
+                "requested_at": requested_at_value.isoformat(sep=" ") if requested_at_value else None,
             },
         )
 
@@ -83,4 +93,5 @@ def enqueue_ocr_job(payload: OCRJobCreate) -> dict:
         "retry_count": 0,
         "model_name": model_name,
         "use_grayscale": payload.use_grayscale,
+        "requested_at": requested_at_value.isoformat(sep=" ") if requested_at_value else None,
     }

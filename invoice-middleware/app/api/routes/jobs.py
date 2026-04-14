@@ -4,6 +4,8 @@ from fastapi.responses import FileResponse, Response
 from app.core.security import verify_internal_token
 from app.schemas.jobs import (
     DocumentCropRequest,
+    ManualDocumentCreateRequest,
+    DocumentOCRCompareRequest,
     DocumentReprocessRequest,
     DocumentReviewUpdate,
     DocumentRotateRequest,
@@ -12,7 +14,9 @@ from app.schemas.jobs import (
 )
 from app.services.document_service import (
     complete_document_review,
+    compare_document_ocr,
     crop_document_file,
+    create_manual_document,
     create_document_and_queue_job,
     reextract_document_fields,
     render_document_preview_image,
@@ -53,6 +57,7 @@ def upload_document_for_ocr(
     requested_by: str = Form(...),
     document_type: str = Form(...),
     model_name: str | None = Form(default=None),
+    requested_at: str | None = Form(default=None),
     file: UploadFile = File(...),
     _: None = Depends(verify_internal_token),
 ) -> dict:
@@ -63,6 +68,23 @@ def upload_document_for_ocr(
             document_type=document_type,
             model_name=model_name,
             upload_file=file,
+            requested_at=requested_at,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/documents/manual")
+def create_manual_document_route(
+    payload: ManualDocumentCreateRequest,
+    _: None = Depends(verify_internal_token),
+) -> dict:
+    try:
+        return create_manual_document(
+            company_id=payload.company_id,
+            requested_by=payload.requested_by,
+            document_type=payload.document_type,
+            original_filename=payload.original_filename,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -258,6 +280,31 @@ def reprocess_document_fields_route(
             status_code=(
                 status.HTTP_400_BAD_REQUEST
                 if message.startswith("User not found") or message.startswith("OCR raw text not found") or message.startswith("Unsupported model")
+                else status.HTTP_404_NOT_FOUND
+            ),
+            detail=message,
+        ) from exc
+
+
+@router.post("/documents/{document_id}/ocr-compare")
+def compare_document_ocr_route(
+    document_id: str,
+    payload: DocumentOCRCompareRequest,
+    _: None = Depends(verify_internal_token),
+) -> dict:
+    try:
+        return compare_document_ocr(
+            document_id,
+            payload.requested_by,
+            payload.model_name,
+            payload.use_grayscale,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+                if message.startswith("User not found") or message.startswith("Unsupported model")
                 else status.HTTP_404_NOT_FOUND
             ),
             detail=message,

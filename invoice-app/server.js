@@ -7,8 +7,9 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const defaultOcrModel = process.env.DEFAULT_OCR_MODEL || "gemma4:e4b";
+const defaultOcrModel = process.env.DEFAULT_OCR_MODEL || "gemini-2.5-flash-lite";
 const fetchTimeoutMs = Number(process.env.APP_FETCH_TIMEOUT_MS || 20000);
+const longFetchTimeoutMs = Number(process.env.APP_LONG_FETCH_TIMEOUT_MS || 300000);
 const upload = multer({ storage: multer.memoryStorage() });
 const sessions = new Map();
 const sessionTtlMs = Number(process.env.APP_SESSION_TTL_MS || 8 * 60 * 60 * 1000);
@@ -16,6 +17,25 @@ const sessionTtlMs = Number(process.env.APP_SESSION_TTL_MS || 8 * 60 * 60 * 1000
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+function normalizeUploadFilename(filename = "") {
+  const original = String(filename || "").trim();
+  if (!original) {
+    return "upload.bin";
+  }
+
+  // Browsers and multipart parsers sometimes hand over UTF-8 names as latin1 mojibake.
+  if (/[ÃÂÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîï]/.test(original)) {
+    try {
+      const recovered = Buffer.from(original, "latin1").toString("utf8").trim();
+      if (recovered) {
+        return recovered;
+      }
+    } catch {}
+  }
+
+  return original;
+}
 
 function parseCookies(cookieHeader = "") {
   return Object.fromEntries(
@@ -93,7 +113,7 @@ async function readApiResponse(response) {
   try {
     return JSON.parse(text);
   } catch {
-    return { detail: text };
+    return { detail: text || "응답을 해석하지 못했습니다." };
   }
 }
 
@@ -398,15 +418,79 @@ app.post("/api/upload", requireSession, upload.single("file"), async (req, res) 
   form.set("requested_by", req.appSession.user.id);
   form.set("document_type", req.body.document_type || "invoice");
   form.set("model_name", req.body.model_name || defaultOcrModel);
+  if (req.body.requested_at) {
+    form.set("requested_at", req.body.requested_at);
+  }
   form.set(
     "file",
     new Blob([req.file.buffer], { type: req.file.mimetype || "application/octet-stream" }),
-    req.file.originalname || "upload.bin",
+    normalizeUploadFilename(req.file.originalname),
   );
 
   const response = await fetchMiddleware("/internal/ocr/uploads", {
     method: "POST",
     body: form,
+  });
+
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
+app.post("/api/upload-batch", requireSession, upload.array("files"), async (req, res) => {
+  const files = Array.isArray(req.files) ? req.files : [];
+  if (!files.length) {
+    return res.status(400).json({ detail: "files are required" });
+  }
+
+  const documentType = req.body.document_type || "invoice";
+  const results = [];
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const form = new FormData();
+    form.set("company_id", req.appSession.user.company_id);
+    form.set("requested_by", req.appSession.user.id);
+    form.set("document_type", documentType);
+    form.set("model_name", req.body.model_name || defaultOcrModel);
+    form.set(
+      "file",
+      new Blob([file.buffer], { type: file.mimetype || "application/octet-stream" }),
+      normalizeUploadFilename(file.originalname),
+    );
+
+    const response = await fetchMiddleware("/internal/ocr/uploads", {
+      method: "POST",
+      body: form,
+    });
+    const payload = await readApiResponse(response);
+    results.push({
+      index,
+      filename: normalizeUploadFilename(file.originalname),
+      status_code: response.status,
+      ok: response.ok,
+      payload,
+    });
+  }
+
+  const hasFailure = results.some((item) => !item.ok);
+  res.status(hasFailure ? 207 : 200).json({
+    item_count: results.length,
+    results,
+  });
+});
+
+app.post("/api/documents/manual", requireSession, async (req, res) => {
+  const response = await fetchMiddleware("/internal/ocr/documents/manual", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      company_id: req.appSession.user.company_id,
+      requested_by: req.appSession.user.id,
+      document_type: req.body.document_type || "invoice",
+      original_filename: req.body.original_filename || null,
+    }),
   });
 
   const payload = await readApiResponse(response);
@@ -519,6 +603,34 @@ app.post("/api/documents/:id/reprocess-fields", requireSession, async (req, res)
 
   const payload = await readApiResponse(response);
   res.status(response.status).json(payload);
+});
+
+app.post("/api/documents/:id/ocr-compare", requireSession, async (req, res) => {
+  try {
+    const response = await fetchMiddleware(`/internal/ocr/documents/${req.params.id}/ocr-compare`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requested_by: req.appSession.user.id,
+        model_name: req.body.model_name,
+        use_grayscale: req.body.use_grayscale !== false,
+      }),
+      signal: AbortSignal.timeout(longFetchTimeoutMs),
+    });
+
+    const payload = await readApiResponse(response);
+    res.status(response.status).json(payload);
+  } catch (error) {
+    const message = String(error.message || error);
+    const isTimeout = message.includes("timed out") || message.includes("AbortError");
+    res.status(isTimeout ? 504 : 502).json({
+      detail: isTimeout
+        ? "OCR 비교 처리 시간이 길어져 응답이 중단되었습니다. 잠시 후 다시 시도해 주세요."
+        : `OCR 비교 요청 실패: ${message}`,
+    });
+  }
 });
 
 app.post("/api/documents/:id/rotate", requireSession, async (req, res) => {

@@ -11,6 +11,7 @@ class OCRJobCreate(BaseModel):
     requested_by: str | None = None
     model_name: str | None = None
     use_grayscale: bool = True
+    requested_at: str | None = None
 
 
 class OCRJobResponse(BaseModel):
@@ -70,11 +71,28 @@ class DocumentReprocessRequest(BaseModel):
     use_grayscale: bool = True
 
 
+class ManualDocumentCreateRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    company_id: str
+    requested_by: str
+    document_type: str
+    original_filename: str | None = None
+
+
+class DocumentOCRCompareRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    requested_by: str
+    model_name: str | None = None
+    use_grayscale: bool = True
+
+
 class DocumentRotateRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     requested_by: str
-    degrees: int
+    degrees: float
 
 
 class DocumentCropRequest(BaseModel):
