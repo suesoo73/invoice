@@ -6,6 +6,7 @@ from app.services.local_auth_service import (
     authenticate_local_user,
     create_company,
     create_local_user,
+    delete_local_user,
     list_local_users,
     resolve_company_by_registration_no,
     search_companies,
@@ -87,5 +88,16 @@ def update_local_user_route(
 ) -> dict:
     try:
         return {"user": update_local_user(user_id, **payload.model_dump())}
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.delete("/users/{user_id}")
+def delete_local_user_route(
+    user_id: str,
+    _: None = Depends(verify_internal_token),
+) -> dict:
+    try:
+        return {"user": delete_local_user(user_id)}
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

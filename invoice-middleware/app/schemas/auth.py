@@ -15,8 +15,9 @@ class LocalUserCreateRequest(BaseModel):
     login_id: str
     password: str
     name: str
-    email: str
+    email: str | None = None
     is_operator: bool = False
+    status: str = "active"
 
 
 class LocalUserUpdateRequest(BaseModel):
@@ -26,7 +27,7 @@ class LocalUserUpdateRequest(BaseModel):
     login_id: str
     password: str | None = None
     name: str
-    email: str
+    email: str | None = None
     is_operator: bool = False
     status: str = "active"
 

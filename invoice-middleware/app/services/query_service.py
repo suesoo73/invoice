@@ -1,5 +1,67 @@
+import subprocess
+from datetime import datetime, timezone
+
+from app.core.config import settings
 from app.db.session import db_cursor
 from app.services.runtime_config_service import get_active_llm_config
+
+
+def _get_gpu_status() -> dict:
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=index,name,memory.total,memory.used,utilization.gpu,temperature.gpu,power.draw,power.limit",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "detail": "nvidia-smi not found",
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "available": False,
+            "detail": "nvidia-smi timed out",
+        }
+
+    if result.returncode != 0:
+        return {
+            "available": False,
+            "detail": (result.stderr or result.stdout or "").strip()[:400],
+        }
+
+    gpus: list[dict] = []
+    for line in (result.stdout or "").splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 4:
+            continue
+        try:
+            gpus.append(
+                {
+                    "index": int(parts[0]),
+                    "name": parts[1],
+                    "memory_total_mb": int(float(parts[2])),
+                    "memory_used_mb": int(float(parts[3])),
+                    "utilization_gpu": int(float(parts[4])) if len(parts) > 4 and parts[4] else None,
+                    "temperature_c": int(float(parts[5])) if len(parts) > 5 and parts[5] else None,
+                    "power_draw_w": float(parts[6]) if len(parts) > 6 and parts[6] else None,
+                    "power_limit_w": float(parts[7]) if len(parts) > 7 and parts[7] else None,
+                }
+            )
+        except ValueError:
+            continue
+
+    return {
+        "available": True,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "gpus": gpus,
+    }
 
 
 def list_documents(company_id: str, limit: int = 20, trashed: bool = False) -> list[dict]:
@@ -183,4 +245,10 @@ def get_operator_overview(limit: int = 10) -> dict:
         "job_counts": job_counts,
         "recent_jobs": recent_jobs,
         "llm_config": get_active_llm_config(),
+        "gpu": _get_gpu_status(),
+        "worker_config": {
+            "ocr_parallel_workers": settings.ocr_parallel_workers,
+            "ocr_min_start_gap_seconds": settings.ocr_min_start_gap_seconds,
+            "paddleocr_vl_gpu_ids": settings.paddleocr_vl_gpu_id_list,
+        },
     }

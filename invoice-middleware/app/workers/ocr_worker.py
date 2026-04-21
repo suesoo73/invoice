@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 
 from app.core.config import settings
@@ -95,42 +96,46 @@ def fetch_next_job():
             JOIN documents d ON d.id = j.document_id
             WHERE j.status = 'queued'
             ORDER BY COALESCE(j.requested_at, j.created_at) ASC, j.id ASC
-            LIMIT 1
-            """
-        )
-        job = cursor.fetchone()
-
-        if not job:
-            return None
-
-        logger.info(
-            "Picked queued OCR job",
-            extra={
-                "job_id": job["id"],
-                "document_id": job["document_id"],
-                "model_name": job["model_name"],
-            },
-        )
-
-        cursor.execute(
-            """
-            UPDATE document_jobs
-            SET status = 'processing', started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
+            LIMIT %s
             """,
-            (job["id"],),
+            (max(1, settings.ocr_parallel_workers * 3),),
         )
+        candidates = cursor.fetchall()
 
-        cursor.execute(
-            """
-            UPDATE documents
-            SET status = 'processing', updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
-            """,
-            (job["document_id"],),
-        )
+        for job in candidates:
+            cursor.execute(
+                """
+                UPDATE document_jobs
+                SET status = 'processing', started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND status = 'queued'
+                """,
+                (job["id"],),
+            )
 
-        return job
+            if cursor.rowcount != 1:
+                continue
+
+            cursor.execute(
+                """
+                UPDATE documents
+                SET status = 'processing', updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (job["document_id"],),
+            )
+
+            logger.info(
+                "Picked queued OCR job",
+                extra={
+                    "job_id": job["id"],
+                    "document_id": job["document_id"],
+                    "model_name": job["model_name"],
+                },
+            )
+
+            return job
+
+        return None
 
 
 def has_queued_job() -> bool:
@@ -169,7 +174,15 @@ def get_last_ocr_finish_time() -> datetime | None:
         return row.get("last_finished_at")
 
 
-def wait_for_ocr_gap(min_gap_seconds: int = 60) -> None:
+def wait_for_ocr_gap(min_gap_seconds: int | None = None) -> None:
+    min_gap_seconds = (
+        settings.ocr_min_start_gap_seconds
+        if min_gap_seconds is None
+        else min_gap_seconds
+    )
+    if min_gap_seconds <= 0:
+        return
+
     last_finished_at = get_last_ocr_finish_time()
     if not last_finished_at:
         return
@@ -366,6 +379,40 @@ def fail_job(job: dict, error_message: str) -> None:
         )
 
 
+def process_job(job: dict, gpu_id: str | None = None) -> None:
+    model_name = resolve_model_name(job.get("model_name"))
+    logger.info(
+        "Starting OCR model call",
+        extra={
+            "job_id": job["id"],
+            "document_id": job["document_id"],
+            "model_name": model_name,
+            "file_path": job["file_path"],
+            "gpu_id": gpu_id,
+        },
+    )
+    try:
+        result = run_ocr_with_model(
+            model_name=model_name,
+            file_path=job["file_path"],
+            document_type=job["type"],
+            use_grayscale=bool(job.get("use_grayscale", 1)),
+            gpu_id=gpu_id,
+        )
+        logger.info(
+            "Finished OCR model call",
+            extra={
+                "job_id": job["id"],
+                "document_id": job["document_id"],
+                "model_name": model_name,
+                "gpu_id": gpu_id,
+            },
+        )
+        complete_job(job, result)
+    except Exception as exc:
+        fail_job(job, str(exc))
+
+
 def process_next_job() -> bool:
     if not has_queued_job():
         return False
@@ -375,45 +422,65 @@ def process_next_job() -> bool:
     if not job:
         return False
 
-    model_name = resolve_model_name(job.get("model_name"))
-    logger.info(
-        "Starting OCR model call",
-        extra={
-            "job_id": job["id"],
-            "document_id": job["document_id"],
-            "model_name": model_name,
-            "file_path": job["file_path"],
-        },
-    )
-    try:
-        result = run_ocr_with_model(
-            model_name=model_name,
-            file_path=job["file_path"],
-            document_type=job["type"],
-            use_grayscale=bool(job.get("use_grayscale", 1)),
-        )
-        logger.info(
-            "Finished OCR model call",
-            extra={
-                "job_id": job["id"],
-                "document_id": job["document_id"],
-                "model_name": model_name,
-            },
-        )
-        complete_job(job, result)
-    except Exception as exc:
-        fail_job(job, str(exc))
+    gpu_ids = settings.paddleocr_vl_gpu_id_list
+    gpu_id = gpu_ids[0] if gpu_ids else None
+    process_job(job, gpu_id=gpu_id)
     return True
 
 
 def run_worker(poll_interval: int = 5) -> None:
-    while True:
-        recovered = reset_stale_processing_jobs()
-        if recovered:
-            logger.warning("Recovered stale jobs count=%s", recovered)
-        processed = process_next_job()
-        if not processed:
-            time.sleep(poll_interval)
+    max_workers = max(1, settings.ocr_parallel_workers)
+    gpu_ids = settings.paddleocr_vl_gpu_id_list
+    logger.info(
+        "Starting OCR worker pool with max_workers=%s gpu_ids=%s",
+        max_workers,
+        ",".join(gpu_ids) if gpu_ids else "default",
+    )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        in_flight = {}
+        available_gpu_ids = list(gpu_ids)
+
+        while True:
+            recovered = reset_stale_processing_jobs()
+            if recovered:
+                logger.warning("Recovered stale jobs count=%s", recovered)
+
+            while len(in_flight) < max_workers and has_queued_job():
+                wait_for_ocr_gap()
+                job = fetch_next_job()
+                if not job:
+                    break
+                gpu_id = None
+                if available_gpu_ids:
+                    gpu_id = available_gpu_ids.pop(0)
+                elif gpu_ids:
+                    gpu_id = gpu_ids[len(in_flight) % len(gpu_ids)]
+                future = executor.submit(process_job, job, gpu_id)
+                in_flight[future] = gpu_id
+
+            if not in_flight:
+                time.sleep(poll_interval)
+                continue
+
+            done, pending = wait(
+                set(in_flight.keys()),
+                timeout=poll_interval,
+                return_when=FIRST_COMPLETED,
+            )
+            completed_gpu_ids = {
+                future: in_flight.get(future)
+                for future in done
+            }
+            in_flight = {future: in_flight[future] for future in pending}
+            for future in done:
+                gpu_id = completed_gpu_ids.get(future)
+                if gpu_id is not None and gpu_id not in available_gpu_ids:
+                    available_gpu_ids.append(gpu_id)
+                try:
+                    future.result()
+                except Exception:
+                    logger.exception("Unhandled OCR worker task error")
 
 
 def run_once() -> bool:

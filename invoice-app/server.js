@@ -378,6 +378,18 @@ app.patch("/api/operator/users/:id", requireOperator, async (req, res) => {
   res.status(response.status).json(payload);
 });
 
+app.delete("/api/operator/users/:id", requireOperator, async (req, res) => {
+  if (req.appSession.user?.id === req.params.id) {
+    return res.status(400).json({ detail: "현재 로그인한 운영자 계정은 삭제할 수 없습니다." });
+  }
+
+  const response = await fetchMiddleware(`/internal/local-auth/users/${req.params.id}`, {
+    method: "DELETE",
+  });
+  const payload = await readApiResponse(response);
+  res.status(response.status).json(payload);
+});
+
 app.post("/api/auth/logout", (req, res) => {
   const session = getSession(req);
   if (session) {

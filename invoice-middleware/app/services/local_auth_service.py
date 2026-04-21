@@ -7,9 +7,11 @@ import uuid
 import unicodedata
 
 from app.db.session import db_cursor
+from mysql.connector.errors import IntegrityError
 
 _PBKDF2_ITERATIONS = 600000
 _REGISTRATION_NO_DIGITS = 10
+_PLACEHOLDER_EMAIL_DOMAIN = "local.invalid"
 
 
 def _hash_password(password: str) -> str:
@@ -83,6 +85,24 @@ def _generate_company_code(cursor, name: str, registration_no: str) -> str:
         suffix += 1
 
 
+def _placeholder_email(login_id: str) -> str:
+    return f"{login_id}@{_PLACEHOLDER_EMAIL_DOMAIN}"
+
+
+def _normalize_email(email: str | None, login_id: str) -> str:
+    normalized_email = (email or "").strip().lower()
+    return normalized_email or _placeholder_email(login_id)
+
+
+def _sanitize_user_email(user: dict | None) -> dict | None:
+    if not user:
+        return user
+    email = str(user.get("email") or "").strip().lower()
+    if email.endswith(f"@{_PLACEHOLDER_EMAIL_DOMAIN}"):
+        user["email"] = ""
+    return user
+
+
 def authenticate_local_user(login_id: str, password: str) -> dict | None:
     with db_cursor(dictionary=True) as (_, cursor):
         cursor.execute(
@@ -121,7 +141,7 @@ def authenticate_local_user(login_id: str, password: str) -> dict | None:
             (user["id"],),
         )
         user.pop("password_hash", None)
-        return user
+        return _sanitize_user_email(user)
 
 
 def list_local_users() -> list[dict]:
@@ -145,7 +165,7 @@ def list_local_users() -> list[dict]:
             ORDER BY u.is_operator DESC, c.name ASC, u.login_id ASC
             """
         )
-        return cursor.fetchall()
+        return [_sanitize_user_email(item) for item in cursor.fetchall()]
 
 
 def _get_local_user_by_id(cursor, user_id: str) -> dict | None:
@@ -170,7 +190,7 @@ def _get_local_user_by_id(cursor, user_id: str) -> dict | None:
         """,
         (user_id,),
     )
-    return cursor.fetchone()
+    return _sanitize_user_email(cursor.fetchone())
 
 
 def resolve_company_by_registration_no(company_id: str) -> dict | None:
@@ -278,14 +298,21 @@ def create_local_user(
     name: str,
     email: str,
     is_operator: bool,
+    status: str = "active",
 ) -> dict:
     registration_no = _normalize_registration_no(company_id)
     normalized_login = login_id.strip().lower()
-    normalized_email = email.strip().lower()
+    normalized_name = name.strip()
+    normalized_status = (status or "active").strip().lower()
     if not normalized_login:
         raise ValueError("login_id is required")
+    if not normalized_name:
+        raise ValueError("name is required")
     if len(password or "") < 4:
         raise ValueError("password must be at least 4 characters")
+    if normalized_status not in {"active", "inactive"}:
+        raise ValueError("status must be active or inactive")
+    normalized_email = _normalize_email(email, normalized_login)
 
     with db_cursor(dictionary=True) as (_, cursor):
         company = _get_company_by_registration_no(cursor, registration_no)
@@ -297,23 +324,32 @@ def create_local_user(
             raise ValueError("login_id already exists")
 
         user_id = str(uuid.uuid4())
-        cursor.execute(
-            """
-            INSERT INTO users (
-                id, company_id, wp_user_id, login_id, password_hash, email, name, is_operator, status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active')
-            """,
-            (
-                user_id,
-                company["id"],
-                _generate_local_wp_user_id(),
-                normalized_login,
-                _hash_password(password),
-                normalized_email,
-                name.strip(),
-                1 if is_operator else 0,
-            ),
-        )
+        try:
+            cursor.execute(
+                """
+                INSERT INTO users (
+                    id, company_id, wp_user_id, login_id, password_hash, email, name, is_operator, status
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    user_id,
+                    company["id"],
+                    _generate_local_wp_user_id(),
+                    normalized_login,
+                    _hash_password(password),
+                    normalized_email,
+                    normalized_name,
+                    1 if is_operator else 0,
+                    normalized_status,
+                ),
+            )
+        except IntegrityError as exc:
+            message = str(exc).lower()
+            if "uk_users_login_id" in message or "login_id" in message:
+                raise ValueError("login_id already exists") from exc
+            if "uk_users_company_email" in message or "email" in message:
+                raise ValueError("email already exists in this company") from exc
+            raise ValueError("User creation failed due to duplicate or invalid data") from exc
 
         cursor.execute(
             """
@@ -339,7 +375,7 @@ def create_local_user(
         created = cursor.fetchone()
         if not created:
             raise ValueError("User creation failed")
-        return created
+        return _sanitize_user_email(created)
 
 
 def update_local_user(
@@ -355,7 +391,6 @@ def update_local_user(
 ) -> dict:
     registration_no = _normalize_registration_no(company_id)
     normalized_login = login_id.strip().lower()
-    normalized_email = email.strip().lower()
     normalized_name = name.strip()
     normalized_status = (status or "active").strip().lower()
 
@@ -367,6 +402,7 @@ def update_local_user(
         raise ValueError("status must be active or inactive")
     if password and len(password) < 4:
         raise ValueError("password must be at least 4 characters")
+    normalized_email = _normalize_email(email, normalized_login)
 
     with db_cursor(dictionary=True) as (_, cursor):
         existing_user = _get_local_user_by_id(cursor, user_id)
@@ -384,56 +420,80 @@ def update_local_user(
         if cursor.fetchone():
             raise ValueError("login_id already exists")
 
-        if password:
-            cursor.execute(
-                """
-                UPDATE users
-                SET company_id = %s,
-                    login_id = %s,
-                    password_hash = %s,
-                    email = %s,
-                    name = %s,
-                    is_operator = %s,
-                    status = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-                """,
-                (
-                    company["id"],
-                    normalized_login,
-                    _hash_password(password),
-                    normalized_email,
-                    normalized_name,
-                    1 if is_operator else 0,
-                    normalized_status,
-                    user_id,
-                ),
-            )
-        else:
-            cursor.execute(
-                """
-                UPDATE users
-                SET company_id = %s,
-                    login_id = %s,
-                    email = %s,
-                    name = %s,
-                    is_operator = %s,
-                    status = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-                """,
-                (
-                    company["id"],
-                    normalized_login,
-                    normalized_email,
-                    normalized_name,
-                    1 if is_operator else 0,
-                    normalized_status,
-                    user_id,
-                ),
-            )
+        try:
+            if password:
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET company_id = %s,
+                        login_id = %s,
+                        password_hash = %s,
+                        email = %s,
+                        name = %s,
+                        is_operator = %s,
+                        status = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (
+                        company["id"],
+                        normalized_login,
+                        _hash_password(password),
+                        normalized_email,
+                        normalized_name,
+                        1 if is_operator else 0,
+                        normalized_status,
+                        user_id,
+                    ),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET company_id = %s,
+                        login_id = %s,
+                        email = %s,
+                        name = %s,
+                        is_operator = %s,
+                        status = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (
+                        company["id"],
+                        normalized_login,
+                        normalized_email,
+                        normalized_name,
+                        1 if is_operator else 0,
+                        normalized_status,
+                        user_id,
+                    ),
+                )
+        except IntegrityError as exc:
+            message = str(exc).lower()
+            if "uk_users_login_id" in message or "login_id" in message:
+                raise ValueError("login_id already exists") from exc
+            if "uk_users_company_email" in message or "email" in message:
+                raise ValueError("email already exists in this company") from exc
+            raise ValueError("User update failed due to duplicate or invalid data") from exc
 
         updated = _get_local_user_by_id(cursor, user_id)
         if not updated:
             raise ValueError("User update failed")
         return updated
+
+
+def delete_local_user(user_id: str) -> dict:
+    with db_cursor(dictionary=True) as (_, cursor):
+        existing_user = _get_local_user_by_id(cursor, user_id)
+        if not existing_user:
+            raise ValueError("User not found")
+
+        try:
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        except IntegrityError as exc:
+            raise ValueError("User cannot be deleted because related records exist") from exc
+
+        if cursor.rowcount < 1:
+            raise ValueError("User deletion failed")
+        return existing_user

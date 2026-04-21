@@ -22,6 +22,10 @@
     .shell { width:min(1280px,calc(100% - 28px)); margin:20px auto 40px; display:grid; gap:18px; }
     .hero,.card { border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); overflow:hidden; }
       .hero { padding:28px; background:linear-gradient(135deg,#2c2318 0%,#6b4529 100%); color:#fffaf2; }
+      .hero-top { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:8px; }
+      .hero-auth-button { width:auto; min-width:110px; padding:10px 18px; border-radius:999px; border:1px solid rgba(255,250,242,.34); background:rgba(255,250,242,.12); color:#fffaf2; }
+      .hero-auth-button.alt { background:#fffaf2; color:#5b4633; }
+      .hero-link-button { width:auto; min-width:132px; padding:10px 18px; border-radius:999px; border:1px solid rgba(255,250,242,.34); background:rgba(255,250,242,.18); color:#fffaf2; }
       .hero h1 { text-align:center; font-size:3rem; }
       .hero p { margin-top:10px; color:rgba(255,250,242,.84); }
       .hero-copy { margin-top:14px; display:grid; gap:10px; }
@@ -36,6 +40,37 @@
     .actions { grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }
     .menu-tabs { grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
     .ops-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .ops-dashboard { display:grid; gap:14px; }
+    .ops-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .ops-kpi { border:1px solid var(--line); border-radius:18px; background:#fffdf9; padding:14px; display:grid; gap:8px; }
+    .ops-kpi-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .ops-kpi-head h3 { margin:0; font-size:14px; letter-spacing:.2px; color:#5b4633; }
+    .ops-kpi-value { font-size:24px; font-weight:800; letter-spacing:.2px; }
+    .ops-kpi-meta { font-size:13px; color:var(--muted); }
+    .ops-flow { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+    .flow-node { display:flex; flex-direction:column; gap:4px; min-width:160px; padding:12px 14px; border-radius:16px; border:1px solid var(--line); background:#fff; }
+    .flow-node strong { font-size:14px; }
+    .flow-node span { font-size:12px; color:var(--muted); }
+    .flow-arrow { font-weight:900; color:#7b4d21; opacity:.9; padding:0 4px; }
+    .ops-charts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .stackbar { display:flex; height:14px; border-radius:999px; overflow:hidden; background:#f1e5d6; border:1px solid #eadfce; }
+    .stackseg { height:100%; }
+    .stacklegend { margin-top:10px; display:flex; flex-wrap:wrap; gap:8px 10px; }
+    .legend-chip { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid #eadfce; background:#fff; font-size:12px; font-weight:700; color:#5b4633; }
+    .legend-dot { width:10px; height:10px; border-radius:999px; }
+    .gpu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .gpu-card { border:1px solid var(--line); border-radius:18px; background:#fff; padding:14px; display:grid; gap:10px; }
+    .gpu-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .gpu-title strong { display:block; font-size:14px; }
+    .gpu-title .meta { display:block; margin-top:2px; }
+    .gpu-ring { width:58px; height:58px; border-radius:50%; background:conic-gradient(var(--accent) calc(var(--pct) * 1turn), #f1e5d6 0); display:grid; place-items:center; border:1px solid #eadfce; }
+    .gpu-ring span { width:44px; height:44px; border-radius:50%; background:#fff; border:1px solid #eadfce; display:grid; place-items:center; font-size:12px; font-weight:800; color:#5b4633; }
+    .gpu-bar-track { height:12px; border-radius:999px; background:#f1e5d6; overflow:hidden; border:1px solid #eadfce; }
+    .gpu-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#c96b2b 0%,#8f4517 100%); }
+    .gpu-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .gpu-metric { border:1px solid #eadfce; border-radius:14px; padding:10px; background:#fffdf9; }
+    .gpu-metric strong { display:block; margin-top:6px; font-size:14px; }
+    @media (max-width:980px) { .ops-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .ops-charts { grid-template-columns:1fr; } .gpu-grid { grid-template-columns:1fr; } }
     .stat,.box { border:1px solid var(--line); border-radius:18px; background:#fffdf9; padding:14px; }
     .stat strong { display:block; font-size:24px; margin-top:8px; }
     .meta { font-size:13px; color:var(--muted); }
@@ -55,6 +90,8 @@
     .badge.completed { background:#dff3e8; color:var(--ok); }
     .badge.review { background:#fff1d8; color:var(--warn); }
     .badge.processing { background:#ece6ff; color:#6550b9; }
+    .badge.failed { background:#fde2df; color:var(--danger); }
+    .badge.off { background:#efe2d2; color:#7b4d21; }
     .modal-backdrop { position:fixed; inset:0; z-index:50; display:flex; align-items:flex-start; justify-content:center; padding:28px 16px; background:rgba(31,41,51,.46); overflow:auto; }
     .modal-panel { width:min(1632px,calc(100vw - 32px)); }
     .detail-window .body { padding:18px 20px 20px; }
@@ -116,10 +153,6 @@
     .raw-pane.hidden { display:none!important; }
     .raw-rendered { min-height:280px; border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; }
     .raw-rendered iframe { width:100%; min-height:280px; border:0; display:block; background:#fff; }
-    .compare-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-    .compare-card { border:1px solid var(--line); border-radius:16px; background:#fff; padding:14px; display:grid; gap:12px; }
-    .compare-card h4 { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .compare-raw { max-height:280px; }
     .report-grid { display:grid; gap:14px; }
     .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .report-kpi { border:1px solid var(--line); border-radius:18px; background:#fffdf9; padding:14px; }
@@ -136,22 +169,161 @@
     .report-table th { background:#f6ecdf; color:#5b4633; font-weight:700; }
     .report-filter-note { display:flex; align-items:center; gap:8px; color:#5b4633; font-size:13px; font-weight:600; }
     .report-filter-note input { width:auto; }
-    @media (max-width:980px) { .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-bar-row { grid-template-columns:1fr; } .compare-grid { grid-template-columns:1fr; } }
+    .quickstart-grid { display:grid; gap:14px; margin-top:14px; }
+    .quickstart-step { border:1px solid var(--line); border-radius:16px; background:#fffdf9; padding:14px; display:grid; gap:8px; }
+    .quickstart-step strong { display:flex; align-items:center; gap:10px; font-size:18px; color:#2f3a45; }
+    .quickstart-step strong span { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:999px; background:#f5eadb; color:#9c4f1a; font-size:14px; }
+    .quickstart-tip-list { margin:0; padding-left:18px; display:grid; gap:6px; color:#5b4633; }
+    @media (max-width:980px) { .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-bar-row { grid-template-columns:1fr; } }
     @media (max-width:980px) { .stats,.detail-grid,.detail-workspace,.inline-edit-grid,.ops-grid { grid-template-columns:1fr; } .detail-table,.detail-table tbody,.detail-table tr,.detail-table th,.detail-table td { display:block; width:100%; } .detail-table th { border-bottom:0; padding-bottom:4px; } .detail-table td { padding-top:0; } }
   </style>
 </head>
 <body>
     <div class="shell">
-      <section class="hero"><h1>AI 매입 인사이트</h1><div class="hero-copy"><div class="hero-line">거래명세서와 매입 증빙을 AI가 읽어드리고, 거래처와 품목, 금액 정보까지 깔끔하게 정리해드려요.</div><div class="hero-line muted">쌓여가는 매입 문서를 데이터로 바꿔 누적 현황과 흐름을 더 쉽게 살펴보실 수 있어요.</div></div></section>
+      <section class="hero"><div class="hero-top"><button id="quickStartButton" class="hero-link-button" type="button">빠른 시작</button><button id="heroLoginButton" class="hero-auth-button" type="button">로그인</button><button id="heroLogoutButton" class="hero-auth-button alt" type="button">로그아웃</button></div><h1>AI 매입 인사이트</h1><div class="hero-copy"><div class="hero-line">거래명세서와 매입 증빙을 AI가 읽어드리고, 거래처와 품목, 금액 정보까지 깔끔하게 정리해드려요.</div><div class="hero-line muted">쌓여가는 매입 문서를 데이터로 바꿔 누적 현황과 흐름을 더 쉽게 살펴보실 수 있어요.</div></div></section>
     <section id="loginView" class="card"><div class="body"><h2>로그인</h2><p style="margin-top:8px;">앱 전용 로컬 계정으로 로그인합니다.</p><div class="fields" style="margin-top:14px;"><div><label for="username">아이디</label><input id="username" value="suesoo"></div><div><label for="password">비밀번호</label><input id="password" type="password" value="8088"></div></div><div class="actions" style="margin-top:14px;"><button id="loginButton">로그인</button></div><pre id="authResult" class="hidden">대기 중...</pre></div></section>
     <section id="appView" class="hidden">
-      <div class="stats"><div class="stat"><span class="meta">회사</span><strong id="summaryCompany">-</strong><span id="summaryUser" class="meta">-</span></div><div class="stat"><span class="meta">문서 수</span><strong id="summaryDocs">0</strong><span class="meta">현재 목록 기준</span></div><div class="stat"><span class="meta">서비스</span><strong id="summaryStatus">준비됨</strong><span id="summaryHealth" class="meta">상태 확인 전</span></div></div>
-      <section class="card"><div class="body"><div class="menu-tabs"><button id="documentsMenuButton" class="menu-button active">문서 관리</button><button id="processMenuButton" class="menu-button ghost">업로드/OCR</button><button id="reportsMenuButton" class="menu-button ghost">리포트</button><button id="operatorMenuButton" class="menu-button ghost">운영자</button></div></div></section>
-      <section id="processView" class="card hidden"><div class="body"><div class="detail-head"><div><h2>업로드 및 OCR 처리</h2><p class="meta" style="margin-top:4px;">파일 업로드나 수기 입력 시작은 이 메뉴에서 진행합니다.</p></div></div><div class="fields" style="margin-top:12px;"><div><label for="documentType">문서 종류</label><select id="documentType"><option value="invoice">구매 명세표</option><option value="receipt">영수증</option></select></div><div><label for="manualDocumentTitle">수기 입력 문서명</label><input id="manualDocumentTitle" placeholder="예: 2026-04-14 수기입력 거래명세"></div></div><div style="margin-top:10px;"><label for="fileInput">파일</label><input id="fileInput" type="file" multiple><div class="meta" style="margin-top:6px;">여러 파일은 업로드 순서대로 큐에 쌓이고, OCR은 작업 종료 후 1분 간격을 두고 순차 처리됩니다.</div></div><div class="actions" style="margin-top:12px;"><button id="uploadButton">업로드</button><button id="manualCreateButton" class="ghost">수기 입력 시작</button></div><div class="box" style="margin-top:12px;"><pre id="uploadResult">대기 중...</pre></div></div></section>
+      <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr));"><div class="stat"><span class="meta">회사</span><strong id="summaryCompany">-</strong><span id="summaryUser" class="meta">-</span></div><div class="stat"><span class="meta">문서 수</span><strong id="summaryDocs">0</strong><span class="meta">현재 목록 기준</span></div></div>
+      <section class="card"><div class="body"><div class="menu-tabs"><button id="documentsMenuButton" class="menu-button active">문서 관리</button><button id="processMenuButton" class="menu-button ghost">업로드/OCR</button><button id="reportsMenuButton" class="menu-button ghost">리포트</button><button id="myInfoMenuButton" class="menu-button ghost">내 정보</button><button id="operatorMenuButton" class="menu-button ghost">운영자</button></div></div></section>
+      <section id="processView" class="card hidden"><div class="body"><div class="detail-head"><div><h2>업로드 및 OCR 처리</h2><p class="meta" style="margin-top:4px;">파일 업로드나 수기 입력 시작은 이 메뉴에서 진행합니다.</p></div></div><div class="fields" style="margin-top:12px;"><div><label for="documentType">문서 종류</label><select id="documentType"><option value="invoice">구매 명세표</option><option value="receipt">영수증</option></select></div><div><label for="manualDocumentTitle">수기 입력 문서명</label><input id="manualDocumentTitle" placeholder="예: 2026-04-14 수기입력 거래명세"></div></div><div style="margin-top:10px;"><label for="fileInput">파일</label><input id="fileInput" type="file" multiple><div class="meta" style="margin-top:6px;">여러 파일은 업로드 순서대로 큐에 쌓이고, OCR은 작업 종료 후 1분 간격을 두고 순차 처리됩니다.</div></div><div class="actions" style="margin-top:12px;"><button id="uploadButton">업로드</button><button id="manualCreateButton" class="ghost">수기 입력 시작</button></div><div id="uploadNotice" class="section-note" style="margin-top:12px;">파일을 선택해 업로드하거나, 빈 문서를 만들어 바로 수기로 입력할 수 있습니다.</div></div></section>
       <section id="reportsView" class="card hidden"><div class="body"><div class="detail-head"><div><h2>리포트</h2><p class="meta" style="margin-top:4px;">주별, 월별, 분기별, 연도별 매입금액 흐름을 표와 차트로 확인합니다.</p></div></div><div class="fields" style="margin-top:12px;"><div><label for="reportPeriodType">기간 단위</label><select id="reportPeriodType"><option value="weekly">주별</option><option value="monthly" selected>월별</option><option value="quarterly">분기별</option><option value="yearly">연도별</option></select></div><div><label for="reportDateFrom">시작일</label><input id="reportDateFrom" type="date"></div><div><label for="reportDateTo">종료일</label><input id="reportDateTo" type="date"></div><div><label class="report-filter-note" for="reportIncludeTax" style="margin-top:24px;"><input id="reportIncludeTax" type="checkbox" checked>세액 포함 금액으로 보기</label></div></div><div class="actions" style="margin-top:12px;"><button id="reportButton">리포트 조회</button><button id="reportExcelButton" class="alt">엑셀 내보내기</button><button id="reportPdfButton" class="ghost">PDF 내보내기</button></div><div class="report-grid" style="margin-top:14px;"><div id="reportSummaryCards" class="report-kpis"></div><div class="detail-grid"><div class="box"><h3>기간별 차트</h3><div id="reportChart" class="report-chart" style="margin-top:12px;"></div></div><div class="box"><h3>기간별 표</h3><div id="reportPeriodsTable" style="margin-top:12px;"></div></div></div><div class="detail-grid"><div class="box"><h3>거래처별 매입금액</h3><div id="reportVendorsTable" style="margin-top:12px;"></div></div><div class="box"><h3>품목별 매입금액</h3><div id="reportItemsTable" style="margin-top:12px;"></div></div></div></div><pre id="reportSummaryResult" class="hidden">대기 중...</pre><pre id="reportPeriodsResult" class="hidden">대기 중...</pre><pre id="reportVendorsResult" class="hidden">대기 중...</pre><pre id="reportItemsResult" class="hidden">대기 중...</pre></div></section>
-      <section id="operatorView" class="card hidden"><div class="body"><div class="detail-head"><div><h2>운영자 상태</h2><p class="meta" style="margin-top:4px;">앱, 미들웨어, OCR 작업 상태를 운영 기준으로 확인합니다.</p></div></div><div class="actions" style="margin-top:12px;"><button id="operatorRefreshButton">운영 상태 새로고침</button><button id="operatorUsersRefreshButton" class="alt">사용자 목록 새로고침</button></div><div class="ops-grid" style="margin-top:14px;"><div class="box"><h3>앱 서버</h3><pre id="operatorAppResult" style="margin-top:10px;">대기 중...</pre></div><div class="box"><h3>미들웨어</h3><pre id="operatorMiddlewareResult" style="margin-top:10px;">대기 중...</pre></div><div class="box"><h3>문서 현황</h3><pre id="operatorDocumentCounts" style="margin-top:10px;">대기 중...</pre></div><div class="box"><h3>작업 현황</h3><pre id="operatorJobCounts" style="margin-top:10px;">대기 중...</pre></div></div><div class="box" style="margin-top:14px;"><h3>AI / OCR 설정</h3><div class="fields" style="margin-top:12px;"><div><label for="operatorLlmBackend">필드추출 백엔드</label><select id="operatorLlmBackend"><option value="ollama">Ollama</option><option value="external_api">외부 API</option></select></div><div><label for="operatorLlmDefaultModel">필드추출 모델</label><select id="operatorLlmDefaultModel"></select></div><div><label for="operatorOcrBackend">OCR 엔진</label><select id="operatorOcrBackend"><option value="paddleocr_vl">PaddleOCR-VL</option><option value="glm_ocr">GLM-OCR</option></select></div><div><label for="operatorOcrModel">OCR 모델</label><select id="operatorOcrModel"></select><div class="meta" style="margin-top:6px;">GLM-OCR를 쓸 때는 `glm-ocr:latest`를 선택하면 됩니다.</div></div><div><label for="operatorExternalApiKey">외부 API 키 변경</label><input id="operatorExternalApiKey" type="password" placeholder="새 키를 입력하면 즉시 교체됩니다."><div class="meta" id="operatorExternalApiKeyHint" style="margin-top:6px;">현재 저장 상태를 불러오는 중입니다.</div></div></div><div class="actions" style="margin-top:12px;"><button id="operatorSaveLlmConfigButton">AI 연결 모드 저장</button></div><div class="box" style="margin-top:12px;"><pre id="operatorLlmConfigResult">대기 중...</pre></div></div><div class="box" style="margin-top:14px;"><h3>거래처 검색 및 등록</h3><div class="fields" style="margin-top:12px;"><div><label for="operatorCompanySearchQuery">거래처 검색</label><input id="operatorCompanySearchQuery" placeholder="사업자번호 또는 회사명"></div><div><label for="operatorCompanyRegistrationNo">신규 사업자번호</label><input id="operatorCompanyRegistrationNo" placeholder="111-11-11111"></div><div><label for="operatorCompanyCreateName">신규 회사명</label><input id="operatorCompanyCreateName" placeholder="회사명 입력"></div></div><div class="actions" style="margin-top:12px;"><button id="operatorCompanySearchButton" class="ghost">거래처 검색</button><button id="operatorCreateCompanyButton" class="alt">신규 사업자 등록</button></div><div class="box" style="margin-top:12px;"><pre id="operatorCompanySearchResult">대기 중...</pre></div><div class="box" style="margin-top:12px;"><h4>검색 결과</h4><div id="operatorCompaniesTable" style="margin-top:10px;"></div></div></div><div class="box" style="margin-top:14px;"><h3>운영자 사용자 관리</h3><div class="section-note" id="operatorUserEditNotice" style="margin-top:12px;">사용자 행을 클릭하면 수정 모드로 열립니다.</div><div class="fields" style="margin-top:12px;"><div><label for="operatorUserCompanyId">선택된 회사 아이디</label><input id="operatorUserCompanyId" placeholder="111-11-11111"><div class="meta" style="margin-top:6px;">검색 결과를 클릭하거나 신규 등록 후 자동 채워집니다.</div></div><div><label for="operatorUserCompanyName">선택된 회사명</label><input id="operatorUserCompanyName" readonly placeholder="회사 자동 매칭"></div><div><label for="operatorUserLoginId">로그인 아이디</label><input id="operatorUserLoginId"></div><div><label for="operatorUserPassword">비밀번호</label><input id="operatorUserPassword" type="password" placeholder="수정 시 비워두면 기존 비밀번호 유지"></div><div><label for="operatorUserName">이름</label><input id="operatorUserName"></div><div><label for="operatorUserEmail">이메일</label><input id="operatorUserEmail"></div><div><label for="operatorUserStatus">상태</label><select id="operatorUserStatus"><option value="active">활성</option><option value="inactive">비활성</option></select></div><div><label class="toggle-chip" for="operatorUserIsOperator" style="margin-top:24px;"><input id="operatorUserIsOperator" type="checkbox">운영자 권한</label></div></div><div class="actions" style="margin-top:12px;"><button id="operatorCreateUserButton">사용자 생성</button><button id="operatorCancelEditButton" class="ghost hidden" type="button">수정 취소</button></div><div class="box" style="margin-top:12px;"><pre id="operatorCreateUserResult">대기 중...</pre></div><div class="box" style="margin-top:12px;"><h4>사용자 목록</h4><div id="operatorUsersTable" style="margin-top:10px;"></div></div></div><div class="box" style="margin-top:14px;"><h3>최근 OCR 작업</h3><div id="operatorJobsTable" style="margin-top:10px;"></div></div></div></section>
-      <div id="documentsView" class="section-grid"><section class="card"><div class="body"><h3>세션</h3><div id="sessionInfo" class="box" style="margin-top:12px;">불러오는 중...</div><div class="actions" style="margin-top:12px;"><button id="refreshSessionButton" class="alt">새로고침</button><button id="logoutButton" class="ghost">로그아웃</button></div></div></section><section class="card"><div class="body"><h3>문서 목록</h3><div class="fields" style="margin-top:12px;"><div><label for="listLimit">조회 개수</label><input id="listLimit" value="200"></div><div><label for="filterText">검색</label><input id="filterText" placeholder="거래처, 파일명, 금액"></div></div><div class="period-tabs" style="margin-top:12px;"><button id="period1mButton" class="ghost">최근 1개월</button><button id="period3mButton" class="ghost">최근 3개월</button><button id="period6mButton" class="ghost">최근 6개월</button><button id="period12mButton" class="ghost">최근 1년</button></div><div class="actions" style="margin-top:12px;"><button id="listButton">새로고침</button><button id="searchButton" class="alt">검색</button><button id="trashToggleButton" class="ghost">휴지통 보기</button></div><div id="docList" style="margin-top:12px;"></div></div></section></div>
-      <div id="detailModal" class="modal-backdrop hidden"><section id="detailPanel" class="card modal-panel detail-window"><div class="body"><div class="detail-head"><div><h2 id="detailTitle">문서 상세</h2><p id="detailSubtitle" class="meta" style="margin-top:4px;">문서를 선택하면 상세 정보가 열립니다.</p></div><div style="display:flex;gap:10px;align-items:center;"><div id="detailStatusBadge" class="badge">idle</div><button id="detailCloseButton" class="ghost" type="button" style="width:auto;min-width:120px;">닫기</button></div></div><div id="emptyDetail" class="box" style="margin-top:14px;">선택된 문서가 없습니다.</div><div id="detailContent" class="hidden"><div class="detail-workspace"><div class="detail-main"><div class="box detail-editor"><div class="detail-toolbar"><div class="toolbar-group"><button id="saveReviewButton" type="button">저장</button><button id="completeReviewButton" class="alt" type="button">검토 완료</button><button id="deleteButton" class="danger-button" type="button">문서 삭제</button><button id="restoreButton" class="alt hidden" type="button">복원</button></div></div><h3>거래 정보</h3><div class="section-note">항목을 클릭하면 바로 수정할 수 있습니다.</div><div id="detailKv" class="detail-table-wrap" style="margin-top:12px;"></div><div class="fields hidden" style="margin-top:12px;"><div><label for="reviewVendorName">공급하는자(판매자)</label><input id="reviewVendorName"></div><div><label for="reviewVendorRegNo">판매자 사업자번호</label><input id="reviewVendorRegNo" placeholder="000-00-00000"></div><div><label for="reviewBuyerName">공급받는자(구매자)</label><input id="reviewBuyerName"></div><div><label for="reviewBuyerRegNo">구매자 사업자번호</label><input id="reviewBuyerRegNo" placeholder="000-00-00000"></div><div><label for="reviewIssueDate">작성일</label><input id="reviewIssueDate" placeholder="YYYY-MM-DD"></div><div><label for="reviewInvoiceNumber">명세표 번호</label><input id="reviewInvoiceNumber"></div><div><label for="reviewReceiptNumber">영수증 번호</label><input id="reviewReceiptNumber"></div><div><label for="reviewPaymentMethod">결제수단</label><input id="reviewPaymentMethod"></div><div><label for="reviewModelName">재처리 모델</label><input id="reviewModelName" value=""></div><div><label for="reviewSupplyAmount">공급가액</label><input id="reviewSupplyAmount"></div><div><label for="reviewTaxAmount">세액</label><input id="reviewTaxAmount"></div><div><label for="reviewTotalAmount">합계금액</label><input id="reviewTotalAmount"></div></div><div class="hidden"><label for="reviewItems">품목 JSON</label><textarea id="reviewItems"></textarea></div></div></div><div class="preview-panel"><div class="box"><h3>원본 문서</h3><p class="meta" id="previewNote" style="margin-top:6px;">회전 각도를 먼저 맞춰 보고, 마음에 들면 저장한 뒤 재처리할 수 있습니다.</p><div class="preview-toolbar"><button id="zoomOutButton" class="ghost" type="button">축소</button><button id="zoomResetButton" class="ghost" type="button">기본 배율</button><button id="zoomInButton" class="ghost" type="button">확대</button><button id="cropStartButton" class="ghost" type="button">자르기 모드</button><button id="cropSaveButton" class="ghost hidden" type="button">자르기 저장</button><button id="cropCancelButton" class="ghost hidden" type="button">자르기 취소</button><div class="reprocess-popover"><button id="reprocessToggleButton" class="ghost" type="button">재처리</button><div id="reprocessMenu" class="reprocess-menu hidden"><div class="reprocess-menu-title">재처리 옵션</div><label class="toggle-chip" for="reprocessOcrCheckbox"><input id="reprocessOcrCheckbox" type="checkbox" checked>OCR 재처리</label><label class="toggle-chip" for="reprocessFieldsCheckbox"><input id="reprocessFieldsCheckbox" type="checkbox" checked>필드 추출 재처리</label><label class="toggle-chip" for="reprocessGrayscaleCheckbox"><input id="reprocessGrayscaleCheckbox" type="checkbox" checked>grayscale 사용</label><div class="reprocess-help" id="reprocessHelpText">OCR 재처리를 선택하면 원문 OCR과 필드 추출이 함께 다시 실행됩니다.</div><div class="reprocess-actions"><button id="runReprocessOptionsButton" type="button">선택 항목 실행</button></div></div></div><div class="preview-toolbar-spacer"></div><div class="rotate-control-group"><button id="rotateMinusButton" class="ghost" type="button">-1°</button><input id="rotateAngleInput" class="rotate-angle-input" type="number" step="0.1" value="0"><button id="rotatePlusButton" class="ghost" type="button">+1°</button><button id="rotateResetButton" class="ghost" type="button">회전 초기화</button><button id="rotateSaveButton" class="ghost" type="button">회전 저장</button></div></div><div id="previewFrame" class="preview-frame" style="margin-top:12px;"></div></div></div></div><div class="box"><h3>품목</h3><div id="itemsBox" style="margin-top:10px;"></div></div><details id="ocrRawSection" class="fold-section"><summary class="fold-summary">원문 내용</summary><div class="fold-body"><div id="ocrQualityNote" class="section-note">OCR 원문을 불러오는 중입니다.</div><div class="raw-tabs"><button id="ocrRawCodeTab" class="raw-tab active" type="button">HTML 코드</button><button id="ocrRawRenderedTab" class="raw-tab" type="button">렌더링 보기</button></div><div id="ocrRawCodePane" class="raw-pane"><pre id="ocrRawText" style="margin-top:10px;">대기 중...</pre></div><div id="ocrRawRenderedPane" class="raw-pane hidden"><div class="raw-rendered" style="margin-top:10px;"><iframe id="ocrRawPreview" title="OCR 원문 렌더링"></iframe></div></div></div></details><details id="ocrCompareSection" class="fold-section"><summary class="fold-summary">OCR 비교 결과</summary><div class="fold-body"><div id="ocrCompareNote" class="section-note">비교 전입니다. `OCR 비교` 버튼을 누르면 엔진별 결과를 나란히 보여드립니다.</div><div id="ocrCompareBox" style="margin-top:12px;"></div></div></details></div></section></div>
+      <section id="operatorView" class="card hidden">
+        <div class="body">
+          <div class="detail-head">
+            <div>
+              <h2>운영자 상태</h2>
+              <p class="meta" style="margin-top:4px;">앱, 미들웨어, OCR 작업 상태를 운영 기준으로 한눈에 확인합니다.</p>
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:12px;">
+            <button id="operatorRefreshButton">운영 상태 새로고침</button>
+            <button id="operatorUsersRefreshButton" class="alt">사용자 목록 새로고침</button>
+          </div>
+
+          <div class="ops-dashboard" style="margin-top:14px;">
+            <div class="ops-kpis">
+              <div class="ops-kpi">
+                <div class="ops-kpi-head">
+                  <h3>앱 서버</h3>
+                  <span id="operatorAppStatusBadge" class="badge">-</span>
+                </div>
+                <div id="operatorAppKpiValue" class="ops-kpi-value">-</div>
+                <div id="operatorAppKpiMeta" class="ops-kpi-meta">-</div>
+              </div>
+
+              <div class="ops-kpi">
+                <div class="ops-kpi-head">
+                  <h3>미들웨어 / DB</h3>
+                  <span id="operatorMiddlewareStatusBadge" class="badge">-</span>
+                </div>
+                <div id="operatorMiddlewareKpiValue" class="ops-kpi-value">-</div>
+                <div id="operatorMiddlewareKpiMeta" class="ops-kpi-meta">-</div>
+              </div>
+
+              <div class="ops-kpi">
+                <div class="ops-kpi-head">
+                  <h3>GPU</h3>
+                  <span id="operatorGpuStatusBadge" class="badge">-</span>
+                </div>
+                <div id="operatorGpuKpiValue" class="ops-kpi-value">-</div>
+                <div id="operatorGpuKpiMeta" class="ops-kpi-meta">-</div>
+              </div>
+
+              <div class="ops-kpi">
+                <div class="ops-kpi-head">
+                  <h3>OCR 워커</h3>
+                  <span id="operatorWorkerBadge" class="badge">설정</span>
+                </div>
+                <div id="operatorWorkerKpiValue" class="ops-kpi-value">-</div>
+                <div id="operatorWorkerKpiMeta" class="ops-kpi-meta">-</div>
+              </div>
+            </div>
+
+            <div class="box">
+              <h3>처리 흐름</h3>
+              <div class="ops-flow" style="margin-top:12px;">
+                <div class="flow-node"><strong>웹앱</strong><span>invoice-app</span></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>미들웨어</strong><span>업로드 / OCR / DB</span></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>OCR 엔진</strong><span>PaddleOCR-VL / GLM-OCR</span></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>필드 추출</strong><span>Ollama 또는 외부 API</span></div>
+              </div>
+              <div class="meta" style="margin-top:10px;" id="operatorFlowHint">최근 상태를 불러오는 중입니다.</div>
+            </div>
+
+            <div class="ops-charts">
+              <div class="box">
+                <h3>문서 상태</h3>
+                <div id="operatorDocStatusChart" style="margin-top:10px;">대기 중...</div>
+              </div>
+              <div class="box">
+                <h3>작업 상태</h3>
+                <div id="operatorJobStatusChart" style="margin-top:10px;">대기 중...</div>
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="detail-head">
+                <div>
+                  <h3>GPU 상태</h3>
+                  <p class="meta" style="margin-top:4px;">현재 `nvidia-smi` 기준으로 GPU 사용률과 메모리를 보여줍니다.</p>
+                </div>
+              </div>
+              <div id="operatorGpuCards" class="gpu-grid" style="margin-top:12px;">대기 중...</div>
+            </div>
+
+            <details class="fold-section">
+              <summary class="fold-summary">원본 JSON (디버그)</summary>
+              <div class="fold-body">
+                <div class="ops-grid" style="margin-top:12px;">
+                  <div class="box"><h3>앱 서버</h3><pre id="operatorAppResult" style="margin-top:10px;">대기 중...</pre></div>
+                  <div class="box"><h3>미들웨어</h3><pre id="operatorMiddlewareResult" style="margin-top:10px;">대기 중...</pre></div>
+                  <div class="box"><h3>문서 현황</h3><pre id="operatorDocumentCounts" style="margin-top:10px;">대기 중...</pre></div>
+                  <div class="box"><h3>작업 현황</h3><pre id="operatorJobCounts" style="margin-top:10px;">대기 중...</pre></div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="box" style="margin-top:14px;">
+            <h3>AI / OCR 설정</h3>
+            <div class="fields" style="margin-top:12px;">
+              <div>
+                <label for="operatorLlmBackend">필드추출 백엔드</label>
+                <select id="operatorLlmBackend"><option value="ollama">Ollama</option><option value="external_api">외부 API</option></select>
+              </div>
+              <div><label for="operatorLlmDefaultModel">필드추출 모델</label><select id="operatorLlmDefaultModel"></select></div>
+              <div>
+                <label for="operatorOcrBackend">OCR 엔진</label>
+                <select id="operatorOcrBackend"><option value="paddleocr_vl">PaddleOCR-VL</option><option value="glm_ocr">GLM-OCR</option></select>
+              </div>
+              <div>
+                <label for="operatorOcrModel">OCR 모델</label>
+                <select id="operatorOcrModel"></select>
+                <div class="meta" style="margin-top:6px;">GLM-OCR를 쓸 때는 `glm-ocr:latest`를 선택하면 됩니다.</div>
+              </div>
+              <div>
+                <label for="operatorExternalApiKey">외부 API 키 변경</label>
+                <input id="operatorExternalApiKey" type="password" placeholder="새 키를 입력하면 즉시 교체됩니다.">
+                <div class="meta" id="operatorExternalApiKeyHint" style="margin-top:6px;">현재 저장 상태를 불러오는 중입니다.</div>
+              </div>
+            </div>
+            <div class="actions" style="margin-top:12px;"><button id="operatorSaveLlmConfigButton">AI 연결 모드 저장</button></div>
+            <div class="box" style="margin-top:12px;"><pre id="operatorLlmConfigResult">대기 중...</pre></div>
+          </div>
+
+          <div class="box" style="margin-top:14px;"><h3>거래처 검색 및 등록</h3><div class="fields" style="margin-top:12px;"><div><label for="operatorCompanySearchQuery">거래처 검색</label><input id="operatorCompanySearchQuery" placeholder="사업자번호 또는 회사명"></div><div><label for="operatorCompanyRegistrationNo">신규 사업자번호</label><input id="operatorCompanyRegistrationNo" placeholder="111-11-11111"></div><div><label for="operatorCompanyCreateName">신규 회사명</label><input id="operatorCompanyCreateName" placeholder="회사명 입력"></div></div><div class="actions" style="margin-top:12px;"><button id="operatorCompanySearchButton" class="ghost">거래처 검색</button><button id="operatorCreateCompanyButton" class="alt">신규 사업자 등록</button></div><div class="box" style="margin-top:12px;"><pre id="operatorCompanySearchResult">대기 중...</pre></div><div class="box" style="margin-top:12px;"><h4>검색 결과</h4><div id="operatorCompaniesTable" style="margin-top:10px;"></div></div></div>
+          <div class="box" style="margin-top:14px;"><h3>운영자 사용자 관리</h3><div class="section-note" id="operatorUserEditNotice" style="margin-top:12px;">사용자 행을 클릭하면 수정 모드로 열립니다.</div><div class="fields" style="margin-top:12px;"><div><label for="operatorUserCompanyId">선택된 회사 아이디</label><input id="operatorUserCompanyId" placeholder="111-11-11111"><div class="meta" style="margin-top:6px;">검색 결과를 클릭하거나 신규 등록 후 자동 채워집니다.</div></div><div><label for="operatorUserCompanyName">선택된 회사명</label><input id="operatorUserCompanyName" readonly placeholder="회사 자동 매칭"></div><div><label for="operatorUserLoginId">로그인 아이디</label><input id="operatorUserLoginId"></div><div><label for="operatorUserPassword">비밀번호</label><input id="operatorUserPassword" type="password" placeholder="수정 시 비워두면 기존 비밀번호 유지"></div><div><label for="operatorUserName">이름</label><input id="operatorUserName"></div><div><label for="operatorUserEmail">이메일</label><input id="operatorUserEmail"></div><div><label for="operatorUserStatus">상태</label><select id="operatorUserStatus"><option value="active">활성</option><option value="inactive">비활성</option></select></div><div><label class="toggle-chip" for="operatorUserIsOperator" style="margin-top:24px;"><input id="operatorUserIsOperator" type="checkbox">운영자 권한</label></div></div><div class="actions" style="margin-top:12px;"><button id="operatorCreateUserButton">사용자 생성</button><button id="operatorDeleteUserButton" class="alt hidden" type="button">사용자 삭제</button><button id="operatorCancelEditButton" class="ghost hidden" type="button">수정 취소</button></div><div class="box" style="margin-top:12px;"><pre id="operatorCreateUserResult">대기 중...</pre></div><div class="fields" style="margin-top:12px;"><div><label for="operatorUserSearchQuery">사용자 검색</label><input id="operatorUserSearchQuery" placeholder="로그인 아이디, 이름, 이메일, 회사명"></div></div><div class="box" style="margin-top:12px;"><h4>사용자 목록</h4><div id="operatorUsersTable" style="margin-top:10px;"></div></div></div>
+          <div class="box" style="margin-top:14px;"><h3>최근 OCR 작업</h3><div id="operatorJobsTable" style="margin-top:10px;"></div></div>
+        </div>
+      </section>
+      <section id="myInfoView" class="card hidden"><div class="body"><div class="detail-head"><div><h2>내 정보</h2><p class="meta" style="margin-top:4px;">내 계정과 회사 기본 정보를 간단히 확인할 수 있습니다.</p></div></div><div id="myInfoBox" class="box" style="margin-top:12px;">불러오는 중...</div><div class="actions" style="margin-top:12px;"><button id="refreshSessionButton" class="alt">내 정보 새로고침</button><button id="logoutButton" class="ghost">로그아웃</button></div></div></section>
+      <div id="documentsView" class="section-grid"><section class="card"><div class="body"><h3>문서 목록</h3><div class="fields" style="margin-top:12px;"><div><label for="listLimit">조회 개수</label><input id="listLimit" value="200"></div><div><label for="filterText">검색</label><input id="filterText" placeholder="거래처, 파일명, 금액"></div></div><div class="period-tabs" style="margin-top:12px;"><button id="period1mButton" class="ghost">최근 1개월</button><button id="period3mButton" class="ghost">최근 3개월</button><button id="period6mButton" class="ghost">최근 6개월</button><button id="period12mButton" class="ghost">최근 1년</button></div><div class="actions" style="margin-top:12px;"><button id="listButton">새로고침</button><button id="searchButton" class="alt">검색</button><button id="trashToggleButton" class="ghost">휴지통 보기</button></div><div id="docList" style="margin-top:12px;"></div></div></section></div>
+      <div id="detailModal" class="modal-backdrop hidden"><section id="detailPanel" class="card modal-panel detail-window"><div class="body"><div class="detail-head"><div><h2 id="detailTitle">문서 상세</h2><p id="detailSubtitle" class="meta" style="margin-top:4px;">문서를 선택하면 상세 정보가 열립니다.</p></div><div style="display:flex;gap:10px;align-items:center;"><div id="detailStatusBadge" class="badge">idle</div><button id="detailCloseButton" class="ghost" type="button" style="width:auto;min-width:120px;">닫기</button></div></div><div id="emptyDetail" class="box" style="margin-top:14px;">선택된 문서가 없습니다.</div><div id="detailContent" class="hidden"><div class="detail-workspace"><div class="detail-main"><div class="box detail-editor"><div class="detail-toolbar"><div class="toolbar-group"><button id="saveReviewButton" type="button">저장</button><button id="completeReviewButton" class="alt" type="button">검토 완료</button><button id="deleteButton" class="danger-button" type="button">문서 삭제</button><button id="restoreButton" class="alt hidden" type="button">복원</button></div></div><h3>거래 정보</h3><div class="section-note">항목을 클릭하면 바로 수정할 수 있습니다.</div><div id="detailKv" class="detail-table-wrap" style="margin-top:12px;"></div><div class="fields hidden" style="margin-top:12px;"><div><label for="reviewVendorName">공급하는자(판매자)</label><input id="reviewVendorName"></div><div><label for="reviewVendorRegNo">판매자 사업자번호</label><input id="reviewVendorRegNo" placeholder="000-00-00000"></div><div><label for="reviewBuyerName">공급받는자(구매자)</label><input id="reviewBuyerName"></div><div><label for="reviewBuyerRegNo">구매자 사업자번호</label><input id="reviewBuyerRegNo" placeholder="000-00-00000"></div><div><label for="reviewIssueDate">작성일</label><input id="reviewIssueDate" placeholder="YYYY-MM-DD"></div><div><label for="reviewInvoiceNumber">명세표 번호</label><input id="reviewInvoiceNumber"></div><div><label for="reviewReceiptNumber">영수증 번호</label><input id="reviewReceiptNumber"></div><div><label for="reviewPaymentMethod">결제수단</label><input id="reviewPaymentMethod"></div><div><label for="reviewModelName">재처리 모델</label><input id="reviewModelName" value=""></div><div><label for="reviewSupplyAmount">공급가액</label><input id="reviewSupplyAmount"></div><div><label for="reviewTaxAmount">세액</label><input id="reviewTaxAmount"></div><div><label for="reviewTotalAmount">합계금액</label><input id="reviewTotalAmount"></div></div><div class="hidden"><label for="reviewItems">품목 JSON</label><textarea id="reviewItems"></textarea></div></div></div><div class="preview-panel"><div class="box"><h3>원본 문서</h3><p class="meta" id="previewNote" style="margin-top:6px;">회전 각도를 먼저 맞춰 보고, 마음에 들면 저장한 뒤 재처리할 수 있습니다.</p><div class="preview-toolbar"><button id="zoomOutButton" class="ghost" type="button">축소</button><button id="zoomResetButton" class="ghost" type="button">기본 배율</button><button id="zoomInButton" class="ghost" type="button">확대</button><button id="cropStartButton" class="ghost" type="button">자르기 모드</button><button id="cropSaveButton" class="ghost hidden" type="button">자르기 저장</button><button id="cropCancelButton" class="ghost hidden" type="button">자르기 취소</button><div class="reprocess-popover"><button id="reprocessToggleButton" class="ghost" type="button">재처리</button><div id="reprocessMenu" class="reprocess-menu hidden"><div class="reprocess-menu-title">재처리 옵션</div><label class="toggle-chip" for="reprocessOcrCheckbox"><input id="reprocessOcrCheckbox" type="checkbox" checked>OCR 재처리</label><label class="toggle-chip" for="reprocessFieldsCheckbox"><input id="reprocessFieldsCheckbox" type="checkbox" checked>필드 추출 재처리</label><label class="toggle-chip" for="reprocessGrayscaleCheckbox"><input id="reprocessGrayscaleCheckbox" type="checkbox" checked>grayscale 사용</label><div class="reprocess-help" id="reprocessHelpText">OCR 재처리를 선택하면 원문 OCR과 필드 추출이 함께 다시 실행됩니다.</div><div class="reprocess-actions"><button id="runReprocessOptionsButton" type="button">선택 항목 실행</button></div></div></div><div class="preview-toolbar-spacer"></div><div class="rotate-control-group"><button id="rotateMinusButton" class="ghost" type="button">-1°</button><input id="rotateAngleInput" class="rotate-angle-input" type="number" step="0.1" value="0"><button id="rotatePlusButton" class="ghost" type="button">+1°</button><button id="rotateResetButton" class="ghost" type="button">회전 초기화</button><button id="rotateSaveButton" class="ghost" type="button">회전 저장</button></div></div><div id="previewFrame" class="preview-frame" style="margin-top:12px;"></div></div></div></div><div class="box"><h3>품목</h3><div id="itemsBox" style="margin-top:10px;"></div></div><details id="ocrRawSection" class="fold-section"><summary class="fold-summary">원문 내용</summary><div class="fold-body"><div id="ocrQualityNote" class="section-note">OCR 원문을 불러오는 중입니다.</div><div class="raw-tabs"><button id="ocrRawCodeTab" class="raw-tab active" type="button">HTML 코드</button><button id="ocrRawRenderedTab" class="raw-tab" type="button">렌더링 보기</button></div><div id="ocrRawCodePane" class="raw-pane"><pre id="ocrRawText" style="margin-top:10px;">대기 중...</pre></div><div id="ocrRawRenderedPane" class="raw-pane hidden"><div class="raw-rendered" style="margin-top:10px;"><iframe id="ocrRawPreview" title="OCR 원문 렌더링"></iframe></div></div></div></details></div></section></div>
+      <div id="quickStartModal" class="modal-backdrop hidden"><section class="card modal-panel" style="width:min(920px,calc(100vw - 32px));"><div class="body"><div class="detail-head"><div><h2>빠른 시작 안내</h2><p class="meta" style="margin-top:4px;">처음 사용하는 분도 이 순서대로 보면 바로 시작하실 수 있어요.</p></div><button id="quickStartCloseButton" class="ghost" type="button" style="width:auto;min-width:120px;">닫기</button></div><div class="quickstart-grid"><div class="quickstart-step"><strong><span>1</span>로그인하고 문서 관리 화면을 먼저 살펴보세요</strong><p class="meta">최근 등록된 문서와 상태를 한눈에 보실 수 있어요. 필요한 문서는 목록에서 바로 클릭해 상세 내용을 확인하세요.</p></div><div class="quickstart-step"><strong><span>2</span>업로드/OCR에서 파일을 올리거나 수기 입력을 시작하세요</strong><p class="meta">거래명세서나 영수증 파일을 여러 건 한 번에 업로드할 수 있고, 파일이 없으면 수기 입력 문서를 바로 만들어 직접 입력할 수 있어요.</p></div><div class="quickstart-step"><strong><span>3</span>문서 상세에서 거래 정보와 품목을 검토하세요</strong><p class="meta">AI가 읽은 거래처, 날짜, 금액, 품목 정보를 확인하고 필요한 부분만 클릭해서 수정하시면 됩니다.</p></div><div class="quickstart-step"><strong><span>4</span>리포트에서 기간별 흐름과 통계를 확인하세요</strong><p class="meta">주별, 월별, 분기별, 연도별 매입 흐름을 표와 차트로 보고, 엑셀과 PDF로도 내려받으실 수 있어요.</p></div></div><div class="box" style="margin-top:14px;"><h3>처음 쓰실 때 도움이 되는 팁</h3><ul class="quickstart-tip-list" style="margin-top:10px;"><li>문서가 많으면 업로드 후 잠시 기다렸다가 문서 관리에서 상태가 `review` 또는 `completed`로 바뀌는지 확인해 주세요.</li><li>AI가 읽은 값이 다르면 문서 상세에서 바로 수정하고 `저장` 또는 `검토 완료`를 눌러 정리하시면 됩니다.</li><li>내 계정이나 회사 정보는 상단 `내 정보` 메뉴에서 언제든 확인하실 수 있어요.</li></ul></div></div></section></div>
     </section>
   </div>
   <script>
@@ -177,7 +349,6 @@
     let cropMode = false;
     let cropSelection = null;
     let cropDragStart = null;
-    let currentOcrCompare = null;
     let authExpiredNoticeShown = false;
     let detailActionState = { busy: false, mode: "" };
     const $ = (id) => document.getElementById(id);
@@ -254,8 +425,7 @@
       currentDocuments = [];
       currentDetail = null;
       selectedDocumentId = "";
-      currentOcrCompare = null;
-      $("authResult").textContent = json(payload || { detail: "세션이 만료되었습니다. 다시 로그인해 주세요." });
+        $("authResult").textContent = json(payload || { detail: "세션이 만료되었습니다. 다시 로그인해 주세요." });
       setAppVisibility();
       renderSession();
       renderDocuments();
@@ -277,12 +447,14 @@
       return { ok: response.ok, status: response.status, payload };
     }
     function isOperatorUser() { return !!currentSession?.user?.is_operator; }
-    function setAppVisibility() { const isAuthenticated = !!currentSession?.authenticated; $("loginView").classList.toggle("hidden", isAuthenticated); $("appView").classList.toggle("hidden", !isAuthenticated); $("operatorMenuButton").classList.toggle("hidden", !isOperatorUser()); }
-    function setCurrentView(view) { const canOpenOperator = isOperatorUser(); currentView = ["documents", "process", "reports", "operator"].includes(view) ? view : "documents"; if (currentView === "operator" && !canOpenOperator) currentView = "documents"; $("documentsView").classList.toggle("hidden", currentView !== "documents"); $("processView").classList.toggle("hidden", currentView !== "process"); $("reportsView").classList.toggle("hidden", currentView !== "reports"); $("operatorView").classList.toggle("hidden", currentView !== "operator" || !canOpenOperator); $("documentsMenuButton").className = currentView === "documents" ? "menu-button active" : "menu-button ghost"; $("processMenuButton").className = currentView === "process" ? "menu-button active" : "menu-button ghost"; $("reportsMenuButton").className = currentView === "reports" ? "menu-button active" : "menu-button ghost"; $("operatorMenuButton").className = currentView === "operator" ? "menu-button active" : "menu-button ghost"; $("operatorMenuButton").classList.toggle("hidden", !canOpenOperator); if (currentView !== "documents") closeDetailModal(); }
+    function setAppVisibility() { const isAuthenticated = !!currentSession?.authenticated; $("loginView").classList.toggle("hidden", isAuthenticated); $("appView").classList.toggle("hidden", !isAuthenticated); $("operatorMenuButton").classList.toggle("hidden", !isOperatorUser()); $("heroLoginButton").disabled = isAuthenticated; $("heroLogoutButton").disabled = !isAuthenticated; }
+    function setCurrentView(view) { const canOpenOperator = isOperatorUser(); currentView = ["documents", "process", "reports", "myInfo", "operator"].includes(view) ? view : "documents"; if (currentView === "operator" && !canOpenOperator) currentView = "documents"; $("documentsView").classList.toggle("hidden", currentView !== "documents"); $("processView").classList.toggle("hidden", currentView !== "process"); $("reportsView").classList.toggle("hidden", currentView !== "reports"); $("myInfoView").classList.toggle("hidden", currentView !== "myInfo"); $("operatorView").classList.toggle("hidden", currentView !== "operator" || !canOpenOperator); $("documentsMenuButton").className = currentView === "documents" ? "menu-button active" : "menu-button ghost"; $("processMenuButton").className = currentView === "process" ? "menu-button active" : "menu-button ghost"; $("reportsMenuButton").className = currentView === "reports" ? "menu-button active" : "menu-button ghost"; $("myInfoMenuButton").className = currentView === "myInfo" ? "menu-button active" : "menu-button ghost"; $("operatorMenuButton").className = currentView === "operator" ? "menu-button active" : "menu-button ghost"; $("operatorMenuButton").classList.toggle("hidden", !canOpenOperator); if (currentView !== "documents") closeDetailModal(); }
     function setPeriodFilter(months) { currentPeriodMonths = months; [["period1mButton",1],["period3mButton",3],["period6mButton",6],["period12mButton",12]].forEach(([id, value]) => { $(id).className = months === value ? "menu-button active" : "menu-button ghost"; }); renderDocuments(); }
     function openDetailModal() { $("detailModal").classList.remove("hidden"); document.body.style.overflow = "hidden"; }
-      function closeDetailModal() { toggleReprocessMenu(false); $("detailModal").classList.add("hidden"); document.body.style.overflow = ""; }
-      function setOcrRawTab(tab) {
+        function closeDetailModal() { toggleReprocessMenu(false); $("detailModal").classList.add("hidden"); document.body.style.overflow = ""; }
+      function openQuickStartModal() { $("quickStartModal").classList.remove("hidden"); document.body.style.overflow = "hidden"; }
+      function closeQuickStartModal() { $("quickStartModal").classList.add("hidden"); if ($("detailModal").classList.contains("hidden")) document.body.style.overflow = ""; }
+        function setOcrRawTab(tab) {
         currentOcrRawTab = tab === "rendered" ? "rendered" : "code";
         $("ocrRawCodeTab").className = currentOcrRawTab === "code" ? "raw-tab active" : "raw-tab";
         $("ocrRawRenderedTab").className = currentOcrRawTab === "rendered" ? "raw-tab active" : "raw-tab";
@@ -301,23 +473,18 @@
       detailActionState = { mode, busy };
       const isFields = busy && mode === "fields";
       const isOcr = busy && mode === "ocr";
-      const isCompare = busy && mode === "compare";
       $("reprocessToggleButton").disabled = busy;
       $("runReprocessOptionsButton").disabled = busy;
       $("reprocessOcrCheckbox").disabled = busy;
       $("reprocessFieldsCheckbox").disabled = busy;
-      if ($("ocrCompareButton")) $("ocrCompareButton").disabled = busy;
       $("runReprocessOptionsButton").textContent = isFields ? "필드 추출 재처리 중..." : isOcr ? "OCR 재처리 중..." : "선택 항목 실행";
       $("reprocessToggleButton").textContent = isFields ? "필드 재처리 중..." : isOcr ? "OCR 재처리 중..." : "재처리";
-      if ($("ocrCompareButton")) $("ocrCompareButton").textContent = isCompare ? "OCR 비교 중..." : "OCR 비교";
       if (busy) {
         $("detailStatusBadge").className = "badge processing";
-        $("detailStatusBadge").textContent = mode === "fields" ? "fields" : mode === "compare" ? "compare" : "processing";
+        $("detailStatusBadge").textContent = mode === "fields" ? "fields" : "processing";
         $("ocrQualityNote").textContent = mode === "fields"
           ? "필드추출 재처리를 진행 중입니다. 저장된 OCR 원문을 다시 해석하고 있습니다."
-          : mode === "compare"
-            ? "OCR 비교를 진행 중입니다. 엔진별 원문과 추출 결과를 나란히 준비하고 있습니다."
-            : "OCR 재처리를 진행 중입니다. 원본 문서 OCR과 필드 추출을 다시 수행하고 있습니다.";
+          : "OCR 재처리를 진행 중입니다. 원본 문서 OCR과 필드 추출을 다시 수행하고 있습니다.";
       }
       syncReprocessOptionsState();
     }
@@ -341,34 +508,6 @@
       $("reprocessMenu").classList.toggle("hidden", !shouldOpen);
       if (shouldOpen) syncReprocessOptionsState();
     }
-    function renderOcrCompare() {
-      if (!currentOcrCompare?.comparison?.comparisons?.length) {
-        $("ocrCompareBox").innerHTML = `<div class="box">비교 결과가 아직 없습니다.</div>`;
-        return;
-      }
-      const comparison = currentOcrCompare.comparison;
-      $("ocrCompareNote").textContent = `비교 기준 필드추출 모델: ${comparison.field_model_name || "-"} · grayscale ${comparison.use_grayscale === false ? "미사용" : "사용"}`;
-      $("ocrCompareBox").innerHTML = `<div class="compare-grid">${comparison.comparisons.map((entry) => {
-        const summary = entry.summary || {};
-        return `<div class="compare-card">
-          <h4><span>${entry.label || entry.backend || "-"}</span><span class="badge">${(entry.backend || "-").replace(/_/g, " ")}</span></h4>
-          <div class="detail-table-wrap"><table class="detail-table"><tbody>
-            <tr><th>공급하는자</th><td>${summary.vendor_name || "-"}</td></tr>
-            <tr><th>판매자 사업자번호</th><td>${summary.vendor_reg_no || "-"}</td></tr>
-            <tr><th>공급받는자</th><td>${summary.buyer_name || "-"}</td></tr>
-            <tr><th>구매자 사업자번호</th><td>${summary.buyer_reg_no || "-"}</td></tr>
-            <tr><th>작성일</th><td>${summary.issue_date || "-"}</td></tr>
-            <tr><th>명세표 번호</th><td>${summary.invoice_number || "-"}</td></tr>
-            <tr><th>품목 수</th><td>${Number(entry.item_count || 0).toLocaleString("ko-KR")}건</td></tr>
-            <tr><th>공급가액</th><td>${formatMoney(summary.supply_amount)}</td></tr>
-            <tr><th>세액</th><td>${formatMoney(summary.tax_amount)}</td></tr>
-            <tr><th>합계금액</th><td>${formatMoney(summary.total_amount)}</td></tr>
-          </tbody></table></div>
-          <div class="meta">OCR 원문 미리보기</div>
-          <pre class="compare-raw">${entry.raw_text || "원문이 없습니다."}</pre>
-        </div>`;
-      }).join("")}</div>`;
-    }
     function syncRotateControls(doc = currentDetail?.document) {
       const isImage = !!doc && isImageMime(doc.mime_type);
       const hasSourceFile = !!String(doc?.file_path || "").trim();
@@ -391,14 +530,188 @@
     function adjustPreviewRotation(delta) { if (!isImageMime(currentDetail?.document?.mime_type)) { window.alert("미세회전은 이미지 문서에서만 사용할 수 있습니다. PDF는 회전 저장 시 90도 단위만 지원합니다."); return; } setPreviewRotation(previewRotation + delta); }
     function resetPreviewRotation() { setPreviewRotation(0); }
     async function savePreviewRotation() { ensureAuthenticated(); if (!selectedDocumentId || !currentDetail?.document) return; const doc = currentDetail.document; const isImage = isImageMime(doc.mime_type); const degrees = isImage ? previewRotation : 90; if (isImage && Math.abs(degrees) < 0.05) { window.alert("먼저 회전 각도를 조정해 주세요."); return; } const confirmMessage = isImage ? `현재 미리보기 각도 ${degrees.toFixed(1)}°로 원본 이미지를 저장할까요?` : "PDF 문서는 90도씩만 회전 저장할 수 있습니다. 90도 회전 저장할까요?"; if (!window.confirm(confirmMessage)) return; const rotateResult = await fetchJson(`/api/documents/${selectedDocumentId}/rotate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ degrees }) }); if (!rotateResult.ok) { window.alert(rotateResult.payload?.detail || "문서 회전에 실패했습니다."); return; } previewRotation = 0; cropMode = false; cropSelection = null; cropDragStart = null; currentDetail = rotateResult.payload; renderDetail(); await refreshList(); }
-    function renderSession() { if (!currentSession?.authenticated) { $("sessionInfo").textContent = "로그인되어 있지 않습니다."; return; } const user = currentSession.user; const companyRegistrationNo = formatCompanyRegistrationNo(user.company_registration_no || ""); $("summaryCompany").textContent = user.company_name || user.company_code || "-"; $("summaryUser").textContent = `${user.name} · ${user.email}`; $("sessionInfo").innerHTML = `<strong>${user.name}</strong><div class="meta">${user.email}</div><div class="meta">회사: ${user.company_name}${companyRegistrationNo ? ` (${companyRegistrationNo})` : user.company_code ? ` (${user.company_code})` : ""}</div><div class="meta">로그인 아이디: ${user.login_id || "-"}</div><div class="meta">권한: ${user.is_operator ? "운영자" : "일반 사용자"}</div><div class="meta">만료 시각: ${currentSession.expires_at || "-"}</div>`; if (!currentOperatorEditingUserId) { if ($("operatorUserCompanyId")) $("operatorUserCompanyId").value = companyRegistrationNo || ""; if ($("operatorUserCompanyName")) $("operatorUserCompanyName").value = user.company_name || ""; } }
-    function resetOperatorUserForm() { currentOperatorEditingUserId = ""; $("operatorUserCompanyId").value = currentSession?.user?.company_registration_no ? formatCompanyRegistrationNo(currentSession.user.company_registration_no) : ""; $("operatorUserCompanyName").value = currentSession?.user?.company_name || ""; $("operatorUserLoginId").value = ""; $("operatorUserPassword").value = ""; $("operatorUserName").value = ""; $("operatorUserEmail").value = ""; $("operatorUserStatus").value = "active"; $("operatorUserIsOperator").checked = false; $("operatorCreateUserButton").textContent = "사용자 생성"; $("operatorCancelEditButton").classList.add("hidden"); $("operatorUserEditNotice").textContent = "사용자 행을 클릭하면 수정 모드로 열립니다."; }
-    function beginOperatorUserEdit(user) { if (!user) return; currentOperatorEditingUserId = user.id || ""; $("operatorUserCompanyId").value = formatCompanyRegistrationNo(user.company_registration_no || ""); $("operatorUserCompanyName").value = user.company_name || ""; $("operatorUserLoginId").value = user.login_id || ""; $("operatorUserPassword").value = ""; $("operatorUserName").value = user.name || ""; $("operatorUserEmail").value = user.email || ""; $("operatorUserStatus").value = (user.status || "active").toLowerCase() === "inactive" ? "inactive" : "active"; $("operatorUserIsOperator").checked = !!user.is_operator; $("operatorCreateUserButton").textContent = "사용자 정보 저장"; $("operatorCancelEditButton").classList.remove("hidden"); $("operatorUserEditNotice").textContent = `${user.login_id || "사용자"} 수정 중입니다. 비밀번호를 비워두면 기존 값을 유지합니다.`; $("operatorCreateUserResult").textContent = json({ editing_user: user }); }
+    function renderSession() { if (!currentSession?.authenticated) { $("myInfoBox").textContent = "로그인되어 있지 않습니다."; return; } const user = currentSession.user; const companyRegistrationNo = formatCompanyRegistrationNo(user.company_registration_no || ""); $("summaryCompany").textContent = user.company_name || user.company_code || "-"; $("summaryUser").textContent = `${user.name} · ${user.email}`; $("myInfoBox").innerHTML = `<strong>${user.name}</strong><div class="meta" style="margin-top:8px;">이메일: ${user.email || "-"}</div><div class="meta">로그인 아이디: ${user.login_id || "-"}</div><div class="meta">회사명: ${user.company_name || "-"}</div><div class="meta">회사 아이디: ${companyRegistrationNo || user.company_code || "-"}</div><div class="meta">권한: ${user.is_operator ? "운영자" : "일반 사용자"}</div>`; if (!currentOperatorEditingUserId) { if ($("operatorUserCompanyId")) $("operatorUserCompanyId").value = companyRegistrationNo || ""; if ($("operatorUserCompanyName")) $("operatorUserCompanyName").value = user.company_name || ""; } }
+    function resetOperatorUserForm() { currentOperatorEditingUserId = ""; $("operatorUserCompanyId").value = currentSession?.user?.company_registration_no ? formatCompanyRegistrationNo(currentSession.user.company_registration_no) : ""; $("operatorUserCompanyName").value = currentSession?.user?.company_name || ""; $("operatorUserLoginId").value = ""; $("operatorUserPassword").value = ""; $("operatorUserName").value = ""; $("operatorUserEmail").value = ""; $("operatorUserStatus").value = "active"; $("operatorUserIsOperator").checked = false; $("operatorCreateUserButton").textContent = "사용자 생성"; $("operatorDeleteUserButton").classList.add("hidden"); $("operatorCancelEditButton").classList.add("hidden"); $("operatorUserEditNotice").textContent = "사용자 행을 클릭하면 수정 모드로 열립니다."; }
+    function beginOperatorUserEdit(user) { if (!user) return; currentOperatorEditingUserId = user.id || ""; $("operatorUserCompanyId").value = formatCompanyRegistrationNo(user.company_registration_no || ""); $("operatorUserCompanyName").value = user.company_name || ""; $("operatorUserLoginId").value = user.login_id || ""; $("operatorUserPassword").value = ""; $("operatorUserName").value = user.name || ""; $("operatorUserEmail").value = user.email || ""; $("operatorUserStatus").value = (user.status || "active").toLowerCase() === "inactive" ? "inactive" : "active"; $("operatorUserIsOperator").checked = !!user.is_operator; $("operatorCreateUserButton").textContent = "사용자 정보 저장"; $("operatorDeleteUserButton").classList.remove("hidden"); $("operatorCancelEditButton").classList.remove("hidden"); $("operatorUserEditNotice").textContent = `${user.login_id || "사용자"} 수정 중입니다. 비밀번호를 비워두면 기존 값을 유지합니다.`; $("operatorCreateUserResult").textContent = json({ editing_user: user }); }
     function renderDocuments() { const query = $("filterText").value.trim().toLowerCase(); const items = currentDocuments.filter((item) => { const text = [item.original_filename,item.vendor_name,item.total_amount,item.supply_amount,item.tax_amount,item.status,item.model_name].filter(Boolean).join(" ").toLowerCase(); return (!query || text.includes(query)) && isWithinMonths(item.issue_date || item.created_at, currentPeriodMonths); }); $("summaryDocs").textContent = String(items.length); $("docList").innerHTML = items.length ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>날짜</th><th>거래처(공급하는자)</th><th>공급가액</th><th>세액</th><th>합계금액</th><th>상태</th></tr></thead><tbody>${items.map((item) => `<tr class="${item.id === selectedDocumentId ? "active" : ""}" data-id="${item.id}"><td>${item.issue_date || String(item.created_at || "").slice(0, 10) || "-"}</td><td>${item.vendor_name || "-"}</td><td>${formatMoney(item.supply_amount)}</td><td>${formatMoney(item.tax_amount)}</td><td>${formatMoney(item.total_amount)}</td><td><span class="${badgeClass(item.status)}">${item.status || "unknown"}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="box">선택한 기간에 표시할 문서가 없습니다.</div>`; document.querySelectorAll("#docList tbody tr").forEach((row) => { row.addEventListener("click", async () => { selectedDocumentId = row.dataset.id; try { await refreshDocument(selectedDocumentId); renderDocuments(); } catch (error) { console.error(error); if (currentSession?.authenticated) window.alert("문서 상세를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."); } }); }); }
-    function renderOperatorOverview() { const overview = currentOperatorOverview?.overview || {}; currentOperatorLlmConfig = overview.llm_config || currentOperatorLlmConfig; $("operatorAppResult").textContent = json(currentOperatorOverview?.app || {}); $("operatorMiddlewareResult").textContent = json(currentOperatorOverview?.middleware || {}); $("operatorDocumentCounts").textContent = json(overview.document_counts || {}); $("operatorJobCounts").textContent = json(overview.job_counts || {}); if (currentOperatorLlmConfig) { $("operatorLlmBackend").value = currentOperatorLlmConfig.llm_backend || "ollama"; allowedOcrModels = currentOperatorLlmConfig.allowed_models || allowedOcrModels; allowedEngineModels = currentOperatorLlmConfig.ocr_allowed_models || allowedEngineModels; ensureSelectOptions("operatorLlmDefaultModel", allowedOcrModels, currentOperatorLlmConfig.default_model || ""); $("operatorOcrBackend").value = currentOperatorLlmConfig.ocr_backend || "paddleocr_vl"; syncOperatorOcrModelOptions(); $("operatorOcrModel").value = currentOperatorLlmConfig.ocr_model || $("operatorOcrModel").value; $("operatorExternalApiKeyHint").textContent = currentOperatorLlmConfig.external_api_key_configured ? `현재 저장된 외부 API 키: ${currentOperatorLlmConfig.external_api_key_masked || "저장됨"}` : "현재 저장된 외부 API 키가 없습니다."; $("operatorLlmConfigResult").textContent = json(currentOperatorLlmConfig); } const jobs = overview.recent_jobs || []; $("operatorJobsTable").innerHTML = jobs.length ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>요청시각</th><th>파일명</th><th>문서상태</th><th>작업상태</th><th>재시도</th><th>모델</th><th>오류</th></tr></thead><tbody>${jobs.map((job) => `<tr><td>${String(job.requested_at || "").replace("T"," ").slice(0,19) || "-"}</td><td>${job.original_filename || "-"}</td><td><span class="${badgeClass(job.document_status)}">${job.document_status || "-"}</span></td><td><span class="${badgeClass(job.job_status)}">${job.job_status || "-"}</span></td><td>${job.retry_count ?? 0}/${job.max_retries ?? 0}</td><td>${job.model_name || "-"}</td><td>${job.error_message || "-"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="box">표시할 최근 작업이 없습니다.</div>`; }
+    function renderOperatorOverview() {
+      const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+      const setHtml = (id, value) => { const el = $(id); if (el) el.innerHTML = value; };
+      const setBadge = (id, text, style) => { const el = $(id); if (!el) return; el.textContent = text; el.className = `badge ${style || ""}`.trim(); };
+      const fmt = (value) => Number(value || 0).toLocaleString("ko-KR");
+
+      const app = currentOperatorOverview?.app || {};
+      const middleware = currentOperatorOverview?.middleware || {};
+      const overview = currentOperatorOverview?.overview || {};
+      const documentCounts = overview.document_counts || {};
+      const jobCounts = overview.job_counts || {};
+      const gpuStatus = overview.gpu || {};
+      const workerConfig = overview.worker_config || {};
+
+      currentOperatorLlmConfig = overview.llm_config || currentOperatorLlmConfig;
+
+      $("operatorAppResult").textContent = json(app);
+      $("operatorMiddlewareResult").textContent = json(middleware);
+      $("operatorDocumentCounts").textContent = json(documentCounts);
+      $("operatorJobCounts").textContent = json(jobCounts);
+
+      // KPI: App
+      const appOk = String(app.status || "").toLowerCase() === "ok";
+      setBadge("operatorAppStatusBadge", appOk ? "OK" : "ERROR", appOk ? "completed" : "failed");
+      setText("operatorAppKpiValue", appOk ? "정상" : "점검 필요");
+      setText(
+        "operatorAppKpiMeta",
+        [
+          `업타임 ${fmt(app.uptime_seconds)}초`,
+          app.server_time ? `서버 시간 ${String(app.server_time).replace("T", " ").slice(0, 19)}` : null,
+        ].filter(Boolean).join(" · ") || "-",
+      );
+
+      // KPI: Middleware / DB
+      const middlewareOk = String(middleware.status || "").toLowerCase() === "ok";
+      const dbOk = String(middleware.database || "").toLowerCase() === "ok";
+      setBadge("operatorMiddlewareStatusBadge", middlewareOk && dbOk ? "OK" : "ERROR", middlewareOk && dbOk ? "completed" : "failed");
+      setText("operatorMiddlewareKpiValue", middlewareOk ? (dbOk ? "정상" : "DB 오류") : "점검 필요");
+      setText(
+        "operatorMiddlewareKpiMeta",
+        [
+          middleware.status ? `미들웨어 ${middleware.status}` : null,
+          middleware.database ? `DB ${middleware.database}` : null,
+        ].filter(Boolean).join(" · ") || "-",
+      );
+
+      // KPI: Worker config
+      const parallel = Number(workerConfig.ocr_parallel_workers ?? 0);
+      const gapSeconds = Number(workerConfig.ocr_min_start_gap_seconds ?? 0);
+      const gpuIds = Array.isArray(workerConfig.paddleocr_vl_gpu_ids) ? workerConfig.paddleocr_vl_gpu_ids : [];
+      setText("operatorWorkerKpiValue", parallel ? `${parallel}개 병렬` : "-");
+      setText(
+        "operatorWorkerKpiMeta",
+        [
+          gapSeconds ? `작업 시작 간격 ${gapSeconds}초` : "작업 시작 간격 미설정",
+          gpuIds.length ? `GPU IDs: ${gpuIds.join(",")}` : "GPU IDs: default",
+        ].join(" · "),
+      );
+
+      // KPI: GPU
+      const gpuAvailable = !!gpuStatus.available;
+      const gpus = Array.isArray(gpuStatus.gpus) ? gpuStatus.gpus : [];
+      const totalMem = gpus.reduce((sum, row) => sum + (Number(row.memory_total_mb) || 0), 0);
+      const usedMem = gpus.reduce((sum, row) => sum + (Number(row.memory_used_mb) || 0), 0);
+      if (!gpuAvailable) {
+        setBadge("operatorGpuStatusBadge", "OFF", "off");
+        setText("operatorGpuKpiValue", "없음");
+        setText("operatorGpuKpiMeta", gpuStatus.detail ? `GPU 정보: ${gpuStatus.detail}` : "GPU 정보를 가져올 수 없습니다.");
+      } else {
+        setBadge("operatorGpuStatusBadge", "OK", "completed");
+        setText("operatorGpuKpiValue", `${gpus.length}개 감지`);
+        setText("operatorGpuKpiMeta", totalMem ? `메모리 ${fmt(usedMem)} / ${fmt(totalMem)} MB` : "메모리 정보 없음");
+      }
+
+      // Flow hint
+      const llmBackend = currentOperatorLlmConfig?.llm_backend || "-";
+      const llmModel = currentOperatorLlmConfig?.default_model || "-";
+      const ocrBackend = currentOperatorLlmConfig?.ocr_backend || "-";
+      const ocrModel = currentOperatorLlmConfig?.ocr_model || "-";
+      setText("operatorFlowHint", `OCR: ${ocrBackend}${ocrModel && ocrModel !== "-" ? " (" + ocrModel + ")" : ""} · 필드추출: ${llmBackend} (${llmModel})`);
+
+      const statusLabel = {
+        queued: "대기",
+        processing: "처리중",
+        review: "검토",
+        completed: "완료",
+        failed: "실패",
+        deleted: "삭제",
+      };
+      const statusColor = {
+        queued: "#caa56b",
+        processing: "#6550b9",
+        review: "#9a5a0a",
+        completed: "#1d6f42",
+        failed: "#b6462a",
+        deleted: "#7b8794",
+      };
+
+      const renderStack = (totalLabel, rows) => {
+        const total = rows.reduce((sum, row) => sum + (Number(row.value) || 0), 0);
+        const segs = rows.map((row) => {
+          const value = Number(row.value) || 0;
+          const pct = total > 0 ? (value / total) * 100 : 0;
+          const width = value > 0 ? Math.max(2, pct) : 0;
+          return `<div class="stackseg" style="width:${width}%;background:${row.color}" title="${row.label} ${fmt(value)}"></div>`;
+        }).join("");
+        const legend = rows.map((row) =>
+          `<div class="legend-chip"><span class="legend-dot" style="background:${row.color}"></span>${row.label} ${fmt(row.value)}</div>`
+        ).join("");
+        return `<div class="meta">${totalLabel}: ${fmt(total)}</div><div class="stackbar" style="margin-top:10px;">${segs || ""}</div><div class="stacklegend">${legend}</div>`;
+      };
+
+      const docStatusRows = [
+        { key: "queued_documents", status: "queued" },
+        { key: "processing_documents", status: "processing" },
+        { key: "review_documents", status: "review" },
+        { key: "completed_documents", status: "completed" },
+        { key: "failed_documents", status: "failed" },
+        { key: "deleted_documents", status: "deleted" },
+      ].map((row) => ({ label: statusLabel[row.status], value: documentCounts[row.key] || 0, color: statusColor[row.status] }));
+      setHtml("operatorDocStatusChart", renderStack("총 문서", docStatusRows));
+
+      const jobStatusRows = [
+        { key: "queued_jobs", status: "queued" },
+        { key: "processing_jobs", status: "processing" },
+        { key: "completed_jobs", status: "completed" },
+        { key: "failed_jobs", status: "failed" },
+      ].map((row) => ({ label: statusLabel[row.status], value: jobCounts[row.key] || 0, color: statusColor[row.status] }));
+      setHtml("operatorJobStatusChart", renderStack("총 작업", jobStatusRows));
+
+      // GPU cards
+      if (!gpuAvailable) {
+        setHtml(
+          "operatorGpuCards",
+          `<div class="section-note">${
+            gpuStatus.detail ? ("GPU 정보를 가져올 수 없습니다: " + gpuStatus.detail) : "GPU 정보를 가져올 수 없습니다."
+          }</div>`,
+        );
+      } else if (!gpus.length) {
+        setHtml("operatorGpuCards", `<div class="section-note">GPU가 감지되지 않았습니다.</div>`);
+      } else {
+        setHtml("operatorGpuCards", gpus.map((gpu) => {
+          const util = gpu.utilization_gpu == null ? null : Number(gpu.utilization_gpu);
+          const memUsed = Number(gpu.memory_used_mb) || 0;
+          const memTotal = Number(gpu.memory_total_mb) || 0;
+          const memPct = memTotal > 0 ? Math.min(100, Math.max(0, (memUsed / memTotal) * 100)) : 0;
+          const pctVar = util == null ? 0 : Math.min(1, Math.max(0, util / 100));
+          const temp = gpu.temperature_c == null ? "-" : `${gpu.temperature_c}°C`;
+          const power = gpu.power_draw_w == null ? "-" : `${Math.round(gpu.power_draw_w)}W`;
+          const powerLimit = gpu.power_limit_w == null ? "" : ` / ${Math.round(gpu.power_limit_w)}W`;
+          const utilText = util == null ? "-" : (util + "%");
+          return `<div class="gpu-card"><div class="gpu-head"><div class="gpu-title"><strong>GPU ${gpu.index}</strong><span class="meta">${gpu.name || "-"}</span></div><div class="gpu-ring" style="--pct:${pctVar};"><span>${utilText}</span></div></div><div><div class="meta">메모리 ${fmt(memUsed)} / ${fmt(memTotal)} MB</div><div class="gpu-bar-track" style="margin-top:8px;"><div class="gpu-bar-fill" style="width:${memPct}%;"></div></div></div><div class="gpu-metrics"><div class="gpu-metric"><span class="meta">GPU 사용률</span><strong>${utilText}</strong></div><div class="gpu-metric"><span class="meta">온도</span><strong>${temp}</strong></div><div class="gpu-metric"><span class="meta">전력</span><strong>${power}${powerLimit}</strong></div></div></div>`;
+        }).join(""));
+      }
+
+      // Keep existing config binding
+      if (currentOperatorLlmConfig) {
+        $("operatorLlmBackend").value = currentOperatorLlmConfig.llm_backend || "ollama";
+        allowedOcrModels = currentOperatorLlmConfig.allowed_models || allowedOcrModels;
+        allowedEngineModels = currentOperatorLlmConfig.ocr_allowed_models || allowedEngineModels;
+        ensureSelectOptions("operatorLlmDefaultModel", allowedOcrModels, currentOperatorLlmConfig.default_model || "");
+        $("operatorOcrBackend").value = currentOperatorLlmConfig.ocr_backend || "paddleocr_vl";
+        syncOperatorOcrModelOptions();
+        $("operatorOcrModel").value = currentOperatorLlmConfig.ocr_model || $("operatorOcrModel").value;
+        $("operatorExternalApiKeyHint").textContent = currentOperatorLlmConfig.external_api_key_configured
+          ? `현재 저장된 외부 API 키: ${currentOperatorLlmConfig.external_api_key_masked || "저장됨"}`
+          : "현재 저장된 외부 API 키가 없습니다.";
+        $("operatorLlmConfigResult").textContent = json(currentOperatorLlmConfig);
+      }
+
+      const jobs = overview.recent_jobs || [];
+      $("operatorJobsTable").innerHTML = jobs.length
+        ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>요청시각</th><th>파일명</th><th>문서상태</th><th>작업상태</th><th>재시도</th><th>모델</th><th>오류</th></tr></thead><tbody>${jobs.map((job) => `<tr><td>${String(job.requested_at || "").replace("T"," ").slice(0,19) || "-"}</td><td>${job.original_filename || "-"}</td><td><span class="${badgeClass(job.document_status)}">${job.document_status || "-"}</span></td><td><span class="${badgeClass(job.job_status)}">${job.job_status || "-"}</span></td><td>${job.retry_count ?? 0}/${job.max_retries ?? 0}</td><td>${job.model_name || "-"}</td><td>${job.error_message || "-"}</td></tr>`).join("")}</tbody></table></div>`
+        : `<div class="box">표시할 최근 작업이 없습니다.</div>`;
+    }
     function selectOperatorCompany(company) { $("operatorUserCompanyId").value = formatCompanyRegistrationNo(company?.registration_no || ""); $("operatorUserCompanyName").value = company?.name || ""; $("operatorCompanyRegistrationNo").value = formatCompanyRegistrationNo(company?.registration_no || ""); $("operatorCompanyCreateName").value = company?.name || ""; }
     function renderOperatorCompanies() { $("operatorCompaniesTable").innerHTML = currentOperatorCompanies.length ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>사업자번호</th><th>회사명</th><th>코드</th></tr></thead><tbody>${currentOperatorCompanies.map((company, index) => `<tr data-index="${index}"><td>${formatCompanyRegistrationNo(company.registration_no || "") || "-"}</td><td>${company.name || "-"}</td><td>${company.code || "-"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="box">검색된 거래처가 없습니다. 없으면 아래 신규 등록으로 추가하면 됩니다.</div>`; document.querySelectorAll("#operatorCompaniesTable tbody tr").forEach((row) => { row.addEventListener("click", () => { const company = currentOperatorCompanies[Number(row.dataset.index)]; if (!company) return; selectOperatorCompany(company); $("operatorCompanySearchResult").textContent = json({ selected_company: company }); }); }); }
-    function renderOperatorUsers() { $("operatorUsersTable").innerHTML = currentOperatorUsers.length ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>회사 아이디</th><th>회사명</th><th>로그인 아이디</th><th>이름</th><th>이메일</th><th>권한</th><th>상태</th><th>최근 로그인</th></tr></thead><tbody>${currentOperatorUsers.map((user, index) => `<tr data-index="${index}" class="${user.id === currentOperatorEditingUserId ? "active" : ""}"><td>${formatCompanyRegistrationNo(user.company_registration_no || "") || "-"}</td><td>${user.company_name || user.company_code || "-"}</td><td>${user.login_id || "-"}</td><td>${user.name || "-"}</td><td>${user.email || "-"}</td><td>${user.is_operator ? "운영자" : "일반 사용자"}</td><td>${user.status || "-"}</td><td>${String(user.last_login_at || "-").replace("T"," ").slice(0,19)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="box">등록된 사용자가 없습니다.</div>`; document.querySelectorAll("#operatorUsersTable tbody tr").forEach((row) => { row.addEventListener("click", () => { const user = currentOperatorUsers[Number(row.dataset.index)]; beginOperatorUserEdit(user); renderOperatorUsers(); }); }); }
+    function renderOperatorUsers() { const query = ($("operatorUserSearchQuery")?.value || "").trim().toLowerCase(); const visibleUsers = currentOperatorUsers.filter((user) => { const text = [user.company_registration_no, user.company_name, user.company_code, user.login_id, user.name, user.email, user.status, user.is_operator ? "운영자" : "일반 사용자"].filter(Boolean).join(" ").toLowerCase(); return !query || text.includes(query); }); $("operatorUsersTable").innerHTML = currentOperatorUsers.length ? visibleUsers.length ? `<div class="table-scroll"><table class="sheet"><thead><tr><th>회사 아이디</th><th>회사명</th><th>로그인 아이디</th><th>이름</th><th>이메일</th><th>권한</th><th>상태</th><th>최근 로그인</th></tr></thead><tbody>${visibleUsers.map((user) => `<tr data-user-id="${user.id || ""}" class="${user.id === currentOperatorEditingUserId ? "active" : ""}"><td>${formatCompanyRegistrationNo(user.company_registration_no || "") || "-"}</td><td>${user.company_name || user.company_code || "-"}</td><td>${user.login_id || "-"}</td><td>${user.name || "-"}</td><td>${user.email || "-"}</td><td>${user.is_operator ? "운영자" : "일반 사용자"}</td><td>${user.status || "-"}</td><td>${String(user.last_login_at || "-").replace("T"," ").slice(0,19)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="box">검색된 사용자가 없습니다.</div>` : `<div class="box">등록된 사용자가 없습니다.</div>`; document.querySelectorAll("#operatorUsersTable tbody tr").forEach((row) => { row.addEventListener("click", () => { const user = currentOperatorUsers.find((item) => item.id === row.dataset.userId); beginOperatorUserEdit(user); renderOperatorUsers(); }); }); }
     function syncOperatorOcrModelOptions() { const backend = $("operatorOcrBackend").value || "paddleocr_vl"; const configured = ocrModelsByBackend?.[backend]; const values = Array.isArray(configured) && configured.length ? configured : backend === "glm_ocr" ? ["glm-ocr:latest"] : ["PaddleOCR-VL-1.5-0.9B"]; ensureSelectOptions("operatorOcrModel", values, $("operatorOcrModel").value || values[0]); }
     function setReviewField(field, value) { const fieldMap = { vendor_name:"reviewVendorName", vendor_reg_no:"reviewVendorRegNo", buyer_name:"reviewBuyerName", buyer_reg_no:"reviewBuyerRegNo", issue_date:"reviewIssueDate", invoice_number:"reviewInvoiceNumber", receipt_number:"reviewReceiptNumber", payment_method:"reviewPaymentMethod", model_name:"reviewModelName", supply_amount:"reviewSupplyAmount", tax_amount:"reviewTaxAmount", total_amount:"reviewTotalAmount" }; const id = fieldMap[field]; if (id && $(id)) $(id).value = value ?? ""; if (currentDetail?.document && field in currentDetail.document) currentDetail.document[field] = value; }
     function ensureInlineEditorHost() { const editor = $("saveReviewButton").closest(".detail-editor"); if (!editor) return null; editor.querySelector(".fields")?.classList.add("hidden"); editor.querySelector("label[for='reviewItems']")?.parentElement?.classList.add("hidden"); let host = $("inlineReviewFields"); if (!host) { host = document.createElement("div"); host.id = "inlineReviewFields"; host.className = "inline-edit-grid"; editor.querySelector("h3")?.insertAdjacentElement("afterend", host); } return host; }
@@ -406,9 +719,9 @@
       function syncDocumentTotalsFromItems() { if (!currentDetail?.document) return; const summary = getDocumentAmountSummary(currentDetail.items || [], currentDetail.document || {}); currentDetail.document.supply_amount = summary.supply_amount; currentDetail.document.tax_amount = summary.tax_amount; currentDetail.document.total_amount = summary.total_amount; $("reviewSupplyAmount").value = summary.supply_amount ?? ""; $("reviewTaxAmount").value = summary.tax_amount ?? ""; $("reviewTotalAmount").value = summary.total_amount ?? ""; const amountMap = { supply_amount: formatMoney(summary.supply_amount), tax_amount: formatMoney(summary.tax_amount), total_amount: `${formatMoney(summary.total_amount)} ${currentDetail.document.currency || ""}`.trim() }; ["supply_amount","tax_amount","total_amount"].forEach((field) => { const row = document.querySelector(`#detailKv tr[data-field="${field}"] .value`); if (row) row.textContent = amountMap[field]; }); }
       function addItemRow() { if (!currentDetail) return; const items = Array.isArray(currentDetail.items) ? currentDetail.items : []; const nextLineNo = items.length ? Math.max(...items.map((item, index) => Number(item?.line_no || index + 1))) + 1 : 1; currentDetail.items = [...items, { line_no: nextLineNo, item_name: "", quantity: null, unit_price: null, line_amount: null, tax_amount: 0, total_amount: 0 }]; $("reviewItems").value = json(currentDetail.items); renderWideItems(currentDetail.items); }
       function renderWideItems(items) { const hasItems = items.length > 0; $("itemsBox").innerHTML = `${hasItems ? `<div class="items-wide"><table><thead><tr><th>순번</th><th>품목명</th><th>수량</th><th>단가</th><th>공급금액</th><th>세액</th><th>총금액</th></tr></thead><tbody>${items.map((item, index) => `<tr data-index="${index}"><td>${item.line_no ?? index + 1}</td><td><input class="item-cell-input" data-field="item_name" value="${String(item.item_name || "").replace(/"/g, "&quot;")}"></td><td><input class="item-cell-input" data-field="quantity" value="${formatEditableQuantity(item.quantity)}"></td><td><input class="item-cell-input" data-field="unit_price" value="${formatEditableUnitPrice(item.unit_price)}"></td><td><input class="item-cell-input" data-field="line_amount" value="${formatEditableMoney(item.line_amount)}"></td><td><input class="item-cell-input" data-field="tax_amount" value="${formatEditableMoney(getItemTaxAmount(item))}"></td><td><input class="item-cell-input" data-field="total_amount" value="${formatEditableMoney(getItemTotalAmount(item))}" readonly></td></tr>`).join("")}</tbody></table></div>` : `<div class="box">품목 정보가 없습니다. 아래에서 행을 추가해 입력할 수 있습니다.</div>`}<div class="actions" style="margin-top:10px;"><button id="addItemRowButton" class="ghost" type="button">품목 행 추가</button></div><div class="section-note" style="margin-top:10px;">품목명, 수량, 단가, 공급금액, 세액을 바로 수정할 수 있습니다. 총금액은 공급금액 + 세액으로 자동 계산됩니다.</div>`; $("addItemRowButton").addEventListener("click", addItemRow); document.querySelectorAll("#itemsBox tbody tr").forEach((row) => { const index = Number(row.dataset.index); const bindRow = () => { const item = currentDetail.items[index] || {}; const itemNameInput = row.querySelector('[data-field="item_name"]'); const quantityInput = row.querySelector('[data-field="quantity"]'); const unitPriceInput = row.querySelector('[data-field="unit_price"]'); const lineAmountInput = row.querySelector('[data-field="line_amount"]'); const taxAmountInput = row.querySelector('[data-field="tax_amount"]'); const totalAmountInput = row.querySelector('[data-field="total_amount"]'); const formatNumericInput = (input, formatter) => { input.addEventListener("focus", () => { input.value = String(input.value || "").replace(/,/g, ""); }); input.addEventListener("blur", () => { input.value = formatter(parseEditorNumber(input.value)); }); }; const sync = () => { const nextItem = { ...item, item_name: itemNameInput.value || "", quantity: parseEditorNumber(quantityInput.value), unit_price: parseEditorNumber(unitPriceInput.value), line_amount: parseEditorNumber(lineAmountInput.value), tax_amount: parseEditorNumber(taxAmountInput.value) }; nextItem.total_amount = (Number(nextItem.line_amount) || 0) + (Number(nextItem.tax_amount) || 0); totalAmountInput.value = formatEditableMoney(nextItem.total_amount); currentDetail.items[index] = nextItem; $("reviewItems").value = json(currentDetail.items); syncDocumentTotalsFromItems(); }; [itemNameInput, quantityInput, unitPriceInput, lineAmountInput, taxAmountInput].forEach((input) => { input.addEventListener("input", sync); input.addEventListener("change", sync); }); formatNumericInput(quantityInput, formatEditableQuantity); formatNumericInput(unitPriceInput, formatEditableUnitPrice); formatNumericInput(lineAmountInput, formatEditableMoney); formatNumericInput(taxAmountInput, formatEditableMoney); }; bindRow(); }); syncDocumentTotalsFromItems(); }
-    function renderDetail() { if (!currentDetail?.document) { $("emptyDetail").classList.remove("hidden"); $("detailContent").classList.add("hidden"); $("detailTitle").textContent = "문서 상세"; $("detailSubtitle").textContent = "문서를 선택하면 상세 정보가 열립니다."; $("detailStatusBadge").className = "badge"; $("detailStatusBadge").textContent = "idle"; $("previewFrame").innerHTML = ""; renderOcrRawContent(""); $("ocrQualityNote").textContent = "OCR 원문을 불러오는 중입니다."; $("ocrRawSection").open = false; $("ocrCompareSection").open = false; $("ocrCompareNote").textContent = "비교 전입니다. `OCR 비교` 버튼을 누르면 엔진별 결과를 나란히 보여드립니다."; currentOcrCompare = null; renderOcrCompare(); setOcrRawTab("code"); previewRotation = 0; cropMode = false; cropSelection = null; cropDragStart = null; detailActionState = { busy: false, mode: "" }; toggleReprocessMenu(false); closeDetailModal(); return; } const doc = currentDetail.document; const items = currentDetail.items || []; const amountSummary = getDocumentAmountSummary(items, doc); doc.supply_amount = amountSummary.supply_amount; doc.tax_amount = amountSummary.tax_amount; doc.total_amount = amountSummary.total_amount; const rows = [["vendor_name","공급하는자(판매자)",doc.vendor_name || "-"],["vendor_reg_no","판매자 사업자번호",doc.vendor_reg_no || "-"],["buyer_name","공급받는자(구매자)",doc.buyer_name || "-"],["buyer_reg_no","구매자 사업자번호",doc.buyer_reg_no || "-"],["issue_date","작성일",doc.issue_date || "-"],["supply_amount","공급가액",formatMoney(doc.supply_amount)],["tax_amount","세액",formatMoney(doc.tax_amount)],["total_amount","합계금액",`${formatMoney(doc.total_amount)} ${doc.currency || ""}`.trim()],["invoice_number","명세표 번호",doc.invoice_number || "-"],["receipt_number","영수증 번호",doc.receipt_number || "-"],["payment_method","결제수단",doc.payment_method || "-"]]; $("emptyDetail").classList.add("hidden"); $("detailContent").classList.remove("hidden"); $("detailTitle").textContent = doc.original_filename || doc.id; $("detailSubtitle").textContent = `${doc.type || "-"} · ${doc.company_id || "-"}`; $("detailStatusBadge").className = badgeClass(doc.status); $("detailStatusBadge").textContent = doc.status || "unknown"; $("detailKv").innerHTML = `<table class="detail-table"><tbody>${rows.map(([field, key, value]) => `<tr data-field="${field}"><th>${key}</th><td><span class="value">${value}</span></td></tr>`).join("")}</tbody></table>`; $("detailKv").querySelectorAll("tr[data-field]").forEach((row) => { row.addEventListener("click", () => { const field = row.dataset.field; const label = row.querySelector("th").textContent; const sourceValue = field === "total_amount" ? doc.total_amount : field === "supply_amount" ? doc.supply_amount : field === "tax_amount" ? doc.tax_amount : currentDetail.document[field]; const next = window.prompt(`${label} 수정`, String(sourceValue ?? "")); if (next === null) return; setReviewField(field, next); renderDetail(); }); }); $("deleteButton").classList.toggle("hidden", !!doc.deleted_at); $("restoreButton").classList.toggle("hidden", !doc.deleted_at); $("reprocessOcrCheckbox").checked = true; $("reprocessFieldsCheckbox").checked = true; $("reprocessGrayscaleCheckbox").checked = currentDetail?.job?.use_grayscale !== false; $("reviewVendorName").value = doc.vendor_name || ""; $("reviewVendorRegNo").value = doc.vendor_reg_no || ""; $("reviewBuyerName").value = doc.buyer_name || ""; $("reviewBuyerRegNo").value = doc.buyer_reg_no || ""; $("reviewIssueDate").value = doc.issue_date || ""; $("reviewInvoiceNumber").value = doc.invoice_number || ""; $("reviewReceiptNumber").value = doc.receipt_number || ""; $("reviewPaymentMethod").value = doc.payment_method || ""; $("reviewSupplyAmount").value = doc.supply_amount || ""; $("reviewTaxAmount").value = doc.tax_amount || ""; $("reviewTotalAmount").value = doc.total_amount || ""; $("reviewItems").value = json(items); renderOcrRawContent(currentDetail?.ocr_raw?.raw_text || ""); $("ocrQualityNote").textContent = classifyOcrQuality(currentDetail); $("ocrRawSection").open = false; if (!currentOcrCompare) { $("ocrCompareSection").open = false; $("ocrCompareNote").textContent = "비교 전입니다. `OCR 비교` 버튼을 누르면 엔진별 결과를 나란히 보여드립니다."; } renderOcrCompare(); setOcrRawTab("code"); renderWideItems(items); syncCropButtons(); syncRotateControls(doc); syncReprocessOptionsState(); renderDocumentPreview(doc); setDetailActionBusy(detailActionState.mode, detailActionState.busy); openDetailModal(); }
+    function renderDetail() { if (!currentDetail?.document) { $("emptyDetail").classList.remove("hidden"); $("detailContent").classList.add("hidden"); $("detailTitle").textContent = "문서 상세"; $("detailSubtitle").textContent = "문서를 선택하면 상세 정보가 열립니다."; $("detailStatusBadge").className = "badge"; $("detailStatusBadge").textContent = "idle"; $("previewFrame").innerHTML = ""; renderOcrRawContent(""); $("ocrQualityNote").textContent = "OCR 원문을 불러오는 중입니다."; $("ocrRawSection").open = false; setOcrRawTab("code"); previewRotation = 0; cropMode = false; cropSelection = null; cropDragStart = null; detailActionState = { busy: false, mode: "" }; toggleReprocessMenu(false); closeDetailModal(); return; } const doc = currentDetail.document; const items = currentDetail.items || []; const amountSummary = getDocumentAmountSummary(items, doc); doc.supply_amount = amountSummary.supply_amount; doc.tax_amount = amountSummary.tax_amount; doc.total_amount = amountSummary.total_amount; const rows = [["vendor_name","공급하는자(판매자)",doc.vendor_name || "-"],["vendor_reg_no","판매자 사업자번호",doc.vendor_reg_no || "-"],["buyer_name","공급받는자(구매자)",doc.buyer_name || "-"],["buyer_reg_no","구매자 사업자번호",doc.buyer_reg_no || "-"],["issue_date","작성일",doc.issue_date || "-"],["supply_amount","공급가액",formatMoney(doc.supply_amount)],["tax_amount","세액",formatMoney(doc.tax_amount)],["total_amount","합계금액",`${formatMoney(doc.total_amount)} ${doc.currency || ""}`.trim()],["invoice_number","명세표 번호",doc.invoice_number || "-"],["receipt_number","영수증 번호",doc.receipt_number || "-"],["payment_method","결제수단",doc.payment_method || "-"]]; $("emptyDetail").classList.add("hidden"); $("detailContent").classList.remove("hidden"); $("detailTitle").textContent = doc.original_filename || doc.id; $("detailSubtitle").textContent = `${doc.type || "-"} · ${doc.company_id || "-"}`; $("detailStatusBadge").className = badgeClass(doc.status); $("detailStatusBadge").textContent = doc.status || "unknown"; $("detailKv").innerHTML = `<table class="detail-table"><tbody>${rows.map(([field, key, value]) => `<tr data-field="${field}"><th>${key}</th><td><span class="value">${value}</span></td></tr>`).join("")}</tbody></table>`; $("detailKv").querySelectorAll("tr[data-field]").forEach((row) => { row.addEventListener("click", () => { const field = row.dataset.field; const label = row.querySelector("th").textContent; const sourceValue = field === "total_amount" ? doc.total_amount : field === "supply_amount" ? doc.supply_amount : field === "tax_amount" ? doc.tax_amount : currentDetail.document[field]; const next = window.prompt(`${label} 수정`, String(sourceValue ?? "")); if (next === null) return; setReviewField(field, next); renderDetail(); }); }); $("deleteButton").classList.toggle("hidden", !!doc.deleted_at); $("restoreButton").classList.toggle("hidden", !doc.deleted_at); $("reprocessOcrCheckbox").checked = true; $("reprocessFieldsCheckbox").checked = true; $("reprocessGrayscaleCheckbox").checked = currentDetail?.job?.use_grayscale !== false; $("reviewVendorName").value = doc.vendor_name || ""; $("reviewVendorRegNo").value = doc.vendor_reg_no || ""; $("reviewBuyerName").value = doc.buyer_name || ""; $("reviewBuyerRegNo").value = doc.buyer_reg_no || ""; $("reviewIssueDate").value = doc.issue_date || ""; $("reviewInvoiceNumber").value = doc.invoice_number || ""; $("reviewReceiptNumber").value = doc.receipt_number || ""; $("reviewPaymentMethod").value = doc.payment_method || ""; $("reviewSupplyAmount").value = doc.supply_amount || ""; $("reviewTaxAmount").value = doc.tax_amount || ""; $("reviewTotalAmount").value = doc.total_amount || ""; $("reviewItems").value = json(items); renderOcrRawContent(currentDetail?.ocr_raw?.raw_text || ""); $("ocrQualityNote").textContent = classifyOcrQuality(currentDetail); $("ocrRawSection").open = false; setOcrRawTab("code"); renderWideItems(items); syncCropButtons(); syncRotateControls(doc); syncReprocessOptionsState(); renderDocumentPreview(doc); setDetailActionBusy(detailActionState.mode, detailActionState.busy); openDetailModal(); }
     function reviewPayload() { return { vendor_name: $("reviewVendorName").value || null, vendor_reg_no: $("reviewVendorRegNo").value || null, buyer_name: $("reviewBuyerName").value || null, buyer_reg_no: $("reviewBuyerRegNo").value || null, issue_date: $("reviewIssueDate").value || null, invoice_number: $("reviewInvoiceNumber").value || null, receipt_number: $("reviewReceiptNumber").value || null, payment_method: $("reviewPaymentMethod").value || null, supply_amount: parseNum($("reviewSupplyAmount").value), tax_amount: parseNum($("reviewTaxAmount").value), total_amount: parseNum($("reviewTotalAmount").value), items: JSON.parse($("reviewItems").value || "[]") }; }
-    async function refreshHealth() { const { payload } = await fetchJson("/api/health"); $("summaryStatus").textContent = payload.middleware?.status || "unknown"; $("summaryHealth").textContent = payload.middleware?.database ? `미들웨어: ${payload.middleware.status}, DB: ${payload.middleware.database}` : "미들웨어 상태를 확인할 수 없습니다."; }
+    async function refreshHealth() { return fetchJson("/api/health"); }
     async function refreshConfig() { const { payload } = await fetchJson("/api/config"); defaultOcrModel = payload?.default_ocr_model || defaultOcrModel; allowedOcrModels = payload?.allowed_ocr_models || allowedOcrModels || [defaultOcrModel]; allowedEngineModels = payload?.allowed_engine_models || allowedEngineModels; ocrModelsByBackend = payload?.ocr_models_by_backend || ocrModelsByBackend; ensureSelectOptions("modelName", allowedOcrModels, defaultOcrModel); $("reviewModelName").value = defaultOcrModel; }
     async function refreshReport() { ensureAuthenticated(); const periodType = $("reportPeriodType").value; const dateFrom = $("reportDateFrom").value || ""; const dateTo = $("reportDateTo").value || ""; const includeTax = $("reportIncludeTax").checked; const { payload } = await fetchJson(`/api/reports/summary?period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&include_tax=${encodeURIComponent(includeTax)}`); $("reportSummaryResult").textContent = json(payload.summary || {}); $("reportPeriodsResult").textContent = json(payload.periods || []); $("reportVendorsResult").textContent = json(payload.vendors || []); $("reportItemsResult").textContent = json(payload.items || []); renderReportSummary(payload.summary || {}, payload.filters || {}); renderReportChart(payload.periods || [], payload.filters || {}); renderReportTable("reportPeriodsTable", [{ key: "period", label: "기간" }, { key: "document_count", label: "문서 수", format: (value) => `${Number(value || 0).toLocaleString("ko-KR")}건` }, { key: "supply_amount_sum", label: "공급가액", format: formatMoney }, { key: "tax_amount_sum", label: "세액", format: formatMoney }, { key: "purchase_amount_sum", label: reportAmountLabel(payload.filters || {}), format: formatMoney }], payload.periods || [], "기간별 데이터가 없습니다."); renderReportTable("reportVendorsTable", [{ key: "vendor_name", label: "거래처" }, { key: "document_count", label: "문서 수", format: (value) => `${Number(value || 0).toLocaleString("ko-KR")}건` }, { key: "purchase_amount_sum", label: reportAmountLabel(payload.filters || {}), format: formatMoney }], payload.vendors || [], "거래처별 데이터가 없습니다."); renderReportTable("reportItemsTable", [{ key: "item_name", label: "품목명" }, { key: "line_count", label: "라인 수", format: (value) => `${Number(value || 0).toLocaleString("ko-KR")}건` }, { key: "purchase_amount_sum", label: reportAmountLabel(payload.filters || {}), format: formatMoney }], payload.items || [], "품목별 데이터가 없습니다."); }
     async function refreshOperatorOverview() { ensureAuthenticated(); if (!isOperatorUser()) return; const result = await fetchJson("/api/operator/overview"); if (!result.ok) { $("operatorAppResult").textContent = json(result.payload || {}); return; } currentOperatorOverview = result.payload; renderOperatorOverview(); }
@@ -420,19 +733,19 @@
     function exportReport(kind) { ensureAuthenticated(); const periodType = $("reportPeriodType").value; const dateFrom = $("reportDateFrom").value || ""; const dateTo = $("reportDateTo").value || ""; const includeTax = $("reportIncludeTax").checked; window.location.href = `/api/reports/export.${kind}?period_type=${encodeURIComponent(periodType)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&include_tax=${encodeURIComponent(includeTax)}`; }
     async function refreshSession() { const { payload, status } = await fetchJson("/api/auth/me"); if (status === 401) return currentSession; currentSession = payload; authExpiredNoticeShown = false; $("authResult").textContent = json(payload); setAppVisibility(); renderSession(); return payload; }
     async function refreshList() { ensureAuthenticated(); const { payload } = await fetchJson(`/api/documents?limit=${encodeURIComponent($("listLimit").value)}&trashed=${encodeURIComponent(showTrash)}`); currentDocuments = payload.items || []; $("trashToggleButton").textContent = showTrash ? "활성 문서 보기" : "휴지통 보기"; renderDocuments(); }
-    async function refreshDocument(id = selectedDocumentId) { ensureAuthenticated(); if (!id) return; selectedDocumentId = id; currentOcrCompare = null; previewRotation = 0; const { payload } = await fetchJson(`/api/documents/${id}`); currentDetail = payload; renderDetail(); }
+    async function refreshDocument(id = selectedDocumentId) { ensureAuthenticated(); if (!id) return; selectedDocumentId = id; previewRotation = 0; const { payload } = await fetchJson(`/api/documents/${id}`); currentDetail = payload; renderDetail(); }
     async function login() { const { payload } = await fetchJson("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: $("username").value, password: $("password").value }) }); $("authResult").textContent = json(payload); await refreshSession(); if (currentSession?.authenticated) { await refreshHealth(); await refreshList(); await refreshReport(); if (isOperatorUser()) { await refreshOperatorOverview(); await refreshOperatorLlmConfig(); await refreshOperatorUsers(); } } }
     async function createOperatorUser() { ensureAuthenticated(); if (!isOperatorUser()) return; const companyId = formatCompanyRegistrationNo($("operatorUserCompanyId").value || ""); $("operatorUserCompanyId").value = companyId; if (companyId.replace(/\D/g, "").length !== 10) { $("operatorCreateUserResult").textContent = json({ detail: "회사 아이디는 111-11-11111 형식이어야 합니다." }); return; } const isEditMode = !!currentOperatorEditingUserId; const method = isEditMode ? "PATCH" : "POST"; const path = isEditMode ? `/api/operator/users/${currentOperatorEditingUserId}` : "/api/operator/users"; const result = await fetchJson(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company_id: companyId, login_id: $("operatorUserLoginId").value || "", password: $("operatorUserPassword").value || "", name: $("operatorUserName").value || "", email: $("operatorUserEmail").value || "", is_operator: $("operatorUserIsOperator").checked, status: $("operatorUserStatus").value || "active" }) }); $("operatorCreateUserResult").textContent = json(result.payload || {}); if (!result.ok) return; resetOperatorUserForm(); await resolveOperatorCompany(); await refreshOperatorUsers(); }
+    async function deleteOperatorUser() { ensureAuthenticated(); if (!isOperatorUser()) return; if (!currentOperatorEditingUserId) { $("operatorCreateUserResult").textContent = json({ detail: "삭제할 사용자를 먼저 선택해 주세요." }); return; } const user = currentOperatorUsers.find((item) => item.id === currentOperatorEditingUserId); if (!user) { $("operatorCreateUserResult").textContent = json({ detail: "삭제할 사용자를 찾을 수 없습니다." }); return; } if (!confirm(`${user.login_id || "선택한 사용자"} 계정을 삭제하시겠습니까? 관련 문서나 작업 기록이 있으면 삭제되지 않을 수 있습니다.`)) return; const result = await fetchJson(`/api/operator/users/${currentOperatorEditingUserId}`, { method: "DELETE" }); $("operatorCreateUserResult").textContent = json(result.payload || {}); if (!result.ok) return; resetOperatorUserForm(); await refreshOperatorUsers(); }
     async function saveOperatorLlmConfig() { ensureAuthenticated(); if (!isOperatorUser()) return; const result = await fetchJson("/api/operator/llm-config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llm_backend: $("operatorLlmBackend").value, default_model: $("operatorLlmDefaultModel").value || null, ocr_backend: $("operatorOcrBackend").value || null, ocr_model: $("operatorOcrModel").value || null, external_llm_api_key: $("operatorExternalApiKey").value.trim() || null }) }); $("operatorLlmConfigResult").textContent = json(result.payload || {}); if (!result.ok) return; currentOperatorLlmConfig = result.payload.config || null; $("operatorExternalApiKey").value = ""; if (currentOperatorLlmConfig) { allowedOcrModels = currentOperatorLlmConfig.allowed_models || allowedOcrModels; allowedEngineModels = currentOperatorLlmConfig.ocr_allowed_models || allowedEngineModels; ensureSelectOptions("operatorLlmDefaultModel", allowedOcrModels, currentOperatorLlmConfig.default_model || ""); $("operatorOcrBackend").value = currentOperatorLlmConfig.ocr_backend || "paddleocr_vl"; syncOperatorOcrModelOptions(); $("operatorOcrModel").value = currentOperatorLlmConfig.ocr_model || $("operatorOcrModel").value; $("operatorExternalApiKeyHint").textContent = currentOperatorLlmConfig.external_api_key_configured ? `현재 저장된 외부 API 키: ${currentOperatorLlmConfig.external_api_key_masked || "저장됨"}` : "현재 저장된 외부 API 키가 없습니다."; ensureSelectOptions("modelName", allowedOcrModels, currentOperatorLlmConfig.default_model || $("modelName").value); $("reviewModelName").value = currentOperatorLlmConfig.default_model || $("reviewModelName").value; defaultOcrModel = currentOperatorLlmConfig.default_model || defaultOcrModel; } await refreshOperatorOverview(); }
     async function logout() { const { payload } = await fetchJson("/api/auth/logout", { method: "POST" }); $("authResult").textContent = json(payload); currentDocuments = []; currentDetail = null; selectedDocumentId = ""; previewRotation = 0; renderDocuments(); renderDetail(); await refreshSession(); }
-    async function uploadDocument() { ensureAuthenticated(); const files = Array.from($("fileInput").files || []); if (!files.length) { $("uploadResult").textContent = "먼저 파일을 선택해 주세요."; return; } if (files.length === 1) { const form = new FormData(); form.set("document_type", $("documentType").value); form.set("file", files[0]); const response = await fetch("/api/upload", { method: "POST", body: form }); const payload = await response.json(); $("uploadResult").textContent = json(payload); if (payload.document_id) { selectedDocumentId = payload.document_id; await refreshList(); await refreshDocument(payload.document_id); } return; } const form = new FormData(); form.set("document_type", $("documentType").value); files.forEach((file) => form.append("files", file)); const response = await fetch("/api/upload-batch", { method: "POST", body: form }); const payload = await response.json(); $("uploadResult").textContent = json(payload); await refreshList(); const firstCreated = payload?.results?.find((item) => item?.payload?.document_id)?.payload?.document_id; if (firstCreated) { selectedDocumentId = firstCreated; await refreshDocument(firstCreated); } }
-    async function createManualDocument() { ensureAuthenticated(); const response = await fetch("/api/documents/manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_type: $("documentType").value, original_filename: $("manualDocumentTitle").value.trim() || null }) }); const payload = await response.json(); $("uploadResult").textContent = json(payload); if (payload?.document?.id) { $("manualDocumentTitle").value = ""; selectedDocumentId = payload.document.id; await refreshList(); await refreshDocument(payload.document.id); setCurrentView("documents"); } }
+    async function uploadDocument() { ensureAuthenticated(); const files = Array.from($("fileInput").files || []); if (!files.length) { $("uploadNotice").textContent = "먼저 파일을 선택해 주세요."; return; } if (files.length === 1) { const form = new FormData(); form.set("document_type", $("documentType").value); form.set("file", files[0]); const response = await fetch("/api/upload", { method: "POST", body: form }); const payload = await response.json(); if (!response.ok) { $("uploadNotice").textContent = payload?.detail || "업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."; return; } $("uploadNotice").textContent = "문서 1건을 업로드했습니다. OCR 처리가 순서대로 진행됩니다."; if (payload.document_id) { selectedDocumentId = payload.document_id; await refreshList(); await refreshDocument(payload.document_id); } return; } const form = new FormData(); form.set("document_type", $("documentType").value); files.forEach((file) => form.append("files", file)); const response = await fetch("/api/upload-batch", { method: "POST", body: form }); const payload = await response.json(); if (!response.ok && response.status !== 207) { $("uploadNotice").textContent = payload?.detail || "여러 파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."; return; } const successCount = Array.isArray(payload?.results) ? payload.results.filter((item) => item?.ok).length : 0; const failCount = Array.isArray(payload?.results) ? payload.results.filter((item) => !item?.ok).length : 0; $("uploadNotice").textContent = failCount ? `총 ${successCount}건 등록, ${failCount}건 실패했습니다. 등록된 문서는 순서대로 OCR 처리됩니다.` : `문서 ${successCount}건을 등록했습니다. 업로드 순서대로 OCR 처리가 진행됩니다.`; await refreshList(); const firstCreated = payload?.results?.find((item) => item?.payload?.document_id)?.payload?.document_id; if (firstCreated) { selectedDocumentId = firstCreated; await refreshDocument(firstCreated); } }
+    async function createManualDocument() { ensureAuthenticated(); const response = await fetch("/api/documents/manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_type: $("documentType").value, original_filename: $("manualDocumentTitle").value.trim() || null }) }); const payload = await response.json(); if (!response.ok) { $("uploadNotice").textContent = payload?.detail || "수기 입력 문서를 만들지 못했습니다."; return; } $("uploadNotice").textContent = "수기 입력 문서를 만들었습니다. 문서 상세에서 바로 내용을 입력할 수 있습니다."; if (payload?.document?.id) { $("manualDocumentTitle").value = ""; selectedDocumentId = payload.document.id; await refreshList(); await refreshDocument(payload.document.id); setCurrentView("documents"); } }
     async function saveReview() { ensureAuthenticated(); if (!selectedDocumentId) return; const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/review`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reviewPayload()) }); if (ok) { currentDetail = payload; renderDetail(); await refreshList(); } }
     async function completeReview() { ensureAuthenticated(); if (!selectedDocumentId) return; const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/complete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); if (ok) { currentDetail = payload; renderDetail(); await refreshList(); } }
     async function reprocessDocument(useGrayscale = $("reprocessGrayscaleCheckbox").checked) { ensureAuthenticated(); if (!selectedDocumentId) return; setDetailActionBusy("ocr", true); try { const result = await fetchJson(`/api/documents/${selectedDocumentId}/reprocess`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model_name: $("reviewModelName").value || null, use_grayscale: useGrayscale }) }); if (!result.ok) { window.alert(result.payload?.detail || "OCR 재처리에 실패했습니다."); return false; } await refreshList(); await refreshDocument(selectedDocumentId); return true; } finally { setDetailActionBusy("", false); } }
     async function reprocessFieldsOnly() { ensureAuthenticated(); if (!selectedDocumentId) return false; setDetailActionBusy("fields", true); try { const result = await fetchJson(`/api/documents/${selectedDocumentId}/reprocess-fields`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model_name: $("reviewModelName").value || null }) }); if (!result.ok) { const detail = result.payload?.detail || ""; window.alert(detail === "OCR raw text not found" ? "저장된 OCR 원문이 없어 먼저 OCR 재처리가 필요합니다." : detail || "필드추출 재처리에 실패했습니다."); return false; } currentDetail = result.payload; renderDetail(); await refreshList(); return true; } finally { setDetailActionBusy("", false); } }
     async function runSelectedReprocess() { ensureAuthenticated(); if (!selectedDocumentId) return; const runOcr = $("reprocessOcrCheckbox").checked; const runFields = $("reprocessFieldsCheckbox").checked; const useGrayscale = $("reprocessGrayscaleCheckbox").checked; if (!runOcr && !runFields) { window.alert("재처리할 항목을 하나 이상 선택해 주세요."); return; } if (runOcr) { const ok = await reprocessDocument(useGrayscale); if (ok) toggleReprocessMenu(false); return; } if (runFields) { const ok = await reprocessFieldsOnly(); if (ok) toggleReprocessMenu(false); } }
-    async function compareOcrResults() { ensureAuthenticated(); if (!selectedDocumentId) return; setDetailActionBusy("compare", true); try { const result = await fetchJson(`/api/documents/${selectedDocumentId}/ocr-compare`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model_name: $("reviewModelName").value || null, use_grayscale: $("reprocessGrayscaleCheckbox").checked }) }); if (!result.ok) { window.alert(result.payload?.detail || "OCR 비교에 실패했습니다."); return; } currentOcrCompare = result.payload; renderOcrCompare(); $("ocrCompareSection").open = true; } finally { setDetailActionBusy("", false); } }
     async function rotateDocument(degrees) { ensureAuthenticated(); if (!selectedDocumentId) return; const label = degrees === 90 ? "오른쪽" : degrees === 270 ? "왼쪽" : `${degrees}도`; if (!window.confirm(`원본 문서를 ${label}으로 회전 저장할까요?`)) return; const rotateResult = await fetchJson(`/api/documents/${selectedDocumentId}/rotate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ degrees }) }); if (!rotateResult.ok) { window.alert(rotateResult.payload?.detail || "문서 회전에 실패했습니다."); return; } cropMode = false; cropSelection = null; cropDragStart = null; currentDetail = rotateResult.payload; renderDetail(); await refreshList(); }
     function adjustPreviewZoom(delta) { previewZoom = Math.min(2.5, Math.max(0.5, Number((previewZoom + delta).toFixed(2)))); if (currentDetail?.document) renderDocumentPreview(currentDetail.document); }
     function resetPreviewZoom() { previewZoom = 1; if (currentDetail?.document) renderDocumentPreview(currentDetail.document); }
@@ -440,12 +753,18 @@
     async function restoreDocument() { ensureAuthenticated(); if (!selectedDocumentId) return; const { ok, payload } = await fetchJson(`/api/documents/${selectedDocumentId}/restore`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); if (ok) { currentDetail = payload; renderDetail(); await refreshList(); } }
     $("detailModal").addEventListener("click", (event) => { if (event.target === $("detailModal")) closeDetailModal(); });
     document.addEventListener("click", (event) => { const menu = $("reprocessMenu"); const toggle = $("reprocessToggleButton"); if (!menu || menu.classList.contains("hidden")) return; if (menu.contains(event.target) || toggle.contains(event.target)) return; menu.classList.add("hidden"); });
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("detailModal").classList.contains("hidden")) closeDetailModal(); });
-    $("detailCloseButton").addEventListener("click", closeDetailModal);
+      document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("detailModal").classList.contains("hidden")) closeDetailModal(); if (event.key === "Escape" && !$("quickStartModal").classList.contains("hidden")) closeQuickStartModal(); });
+      $("detailCloseButton").addEventListener("click", closeDetailModal);
+      $("quickStartButton").addEventListener("click", openQuickStartModal);
+      $("quickStartCloseButton").addEventListener("click", closeQuickStartModal);
+      $("quickStartModal").addEventListener("click", (event) => { if (event.target === $("quickStartModal")) closeQuickStartModal(); });
+      $("heroLoginButton").addEventListener("click", () => { if (currentSession?.authenticated) { setCurrentView("myInfo"); return; } $("username").focus(); $("loginView").scrollIntoView({ behavior: "smooth", block: "start" }); });
+      $("heroLogoutButton").addEventListener("click", logout);
     $("loginButton").addEventListener("click", login);
     $("documentsMenuButton").addEventListener("click", () => setCurrentView("documents"));
     $("processMenuButton").addEventListener("click", () => setCurrentView("process"));
     $("reportsMenuButton").addEventListener("click", async () => { setCurrentView("reports"); if (currentSession?.authenticated) await refreshReport(); });
+    $("myInfoMenuButton").addEventListener("click", () => setCurrentView("myInfo"));
     $("operatorMenuButton").addEventListener("click", async () => { setCurrentView("operator"); if (currentSession?.authenticated) { await refreshOperatorOverview(); await refreshOperatorLlmConfig(); await refreshOperatorUsers(); } });
     $("operatorRefreshButton").addEventListener("click", refreshOperatorOverview);
     $("operatorUsersRefreshButton").addEventListener("click", refreshOperatorUsers);
@@ -454,7 +773,9 @@
     $("operatorCompanySearchButton").addEventListener("click", searchOperatorCompanies);
     $("operatorCreateCompanyButton").addEventListener("click", createOperatorCompany);
     $("operatorCreateUserButton").addEventListener("click", createOperatorUser);
+    $("operatorDeleteUserButton").addEventListener("click", deleteOperatorUser);
     $("operatorCancelEditButton").addEventListener("click", resetOperatorUserForm);
+    $("operatorUserSearchQuery").addEventListener("input", renderOperatorUsers);
     $("operatorCompanySearchQuery").addEventListener("keydown", (event) => { if (event.key === "Enter") searchOperatorCompanies(); });
     $("operatorCompanyRegistrationNo").addEventListener("input", () => { $("operatorCompanyRegistrationNo").value = formatCompanyRegistrationNo($("operatorCompanyRegistrationNo").value); });
     $("operatorUserCompanyId").addEventListener("input", () => { $("operatorUserCompanyId").value = formatCompanyRegistrationNo($("operatorUserCompanyId").value); });
@@ -484,7 +805,6 @@
     $("reprocessOcrCheckbox").addEventListener("change", syncReprocessOptionsState);
     $("reprocessFieldsCheckbox").addEventListener("change", syncReprocessOptionsState);
     $("reprocessGrayscaleCheckbox").addEventListener("change", syncReprocessOptionsState);
-    if ($("ocrCompareButton")) $("ocrCompareButton").addEventListener("click", compareOcrResults);
     $("rotateMinusButton").addEventListener("click", () => adjustPreviewRotation(-1));
     $("rotatePlusButton").addEventListener("click", () => adjustPreviewRotation(1));
     $("rotateResetButton").addEventListener("click", resetPreviewRotation);

@@ -33,12 +33,15 @@ class Settings(BaseSettings):
     paddleocr_vl_min_pixels: int = 196608
     paddleocr_vl_max_new_tokens: int = 768
     paddleocr_vl_timeout_seconds: int = 180
+    paddleocr_vl_gpu_ids: str = "0"
     ollama_timeout_seconds: int = 180
     storage_root: str = "/storage"
     web_app_allowed_origin: str = "https://invoice.nusome.co.kr"
     internal_shared_token: str
     ocr_max_retries: int = 1
     worker_stale_after_seconds: int = 240
+    ocr_parallel_workers: int = 1
+    ocr_min_start_gap_seconds: int = 60
 
     class Config:
         env_file = ".env"
@@ -73,6 +76,14 @@ class Settings(BaseSettings):
         if self.ocr_backend == "glm_ocr":
             return self.glm_ocr_model.strip()
         return self.paddleocr_vl_model
+
+    @property
+    def paddleocr_vl_gpu_id_list(self) -> list[str]:
+        return [
+            item.strip()
+            for item in self.paddleocr_vl_gpu_ids.split(",")
+            if item.strip()
+        ]
 
     @property
     def external_llm_chat_completions_url(self) -> str:

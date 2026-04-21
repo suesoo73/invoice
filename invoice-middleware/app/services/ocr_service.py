@@ -61,7 +61,11 @@ def _strip_html_for_llm(text: str, max_chars: int = 6000) -> str:
     return text.strip()[:max_chars]
 
 
-def _run_paddleocr_vl(file_path: str, use_grayscale: bool = True) -> str:
+def _run_paddleocr_vl(
+    file_path: str,
+    use_grayscale: bool = True,
+    gpu_id: str | None = None,
+) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
         prepared_path = _preprocess_to_grayscale(file_path, tmpdir) if use_grayscale else file_path
         cmd = [
@@ -79,7 +83,8 @@ def _run_paddleocr_vl(file_path: str, use_grayscale: bool = True) -> str:
         ]
         env = os.environ.copy()
         env["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
-        env["CUDA_VISIBLE_DEVICES"] = "0"
+        if gpu_id is not None:
+            env["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
         result = subprocess.run(
             cmd,
@@ -363,15 +368,30 @@ def extract_fields_with_llm(
     )
 
 
-def run_ocr_with_model(*, model_name: str, file_path: str, document_type: str, use_grayscale: bool = True) -> dict:
+def run_ocr_with_model(
+    *,
+    model_name: str,
+    file_path: str,
+    document_type: str,
+    use_grayscale: bool = True,
+    gpu_id: str | None = None,
+) -> dict:
     active_config = get_active_llm_config()
     ocr_backend = active_config.get("ocr_backend") or settings.ocr_backend
     ocr_model = active_config.get("ocr_model") or settings.default_ocr_model
     if ocr_backend == "glm_ocr":
         ocr_text, ocr_payload = _run_glm_ocr(file_path, use_grayscale=use_grayscale)
     else:
-        ocr_text = _run_paddleocr_vl(file_path, use_grayscale=use_grayscale)
-        ocr_payload = {"engine": "paddleocr_vl", "model": settings.paddleocr_vl_model}
+        ocr_text = _run_paddleocr_vl(
+            file_path,
+            use_grayscale=use_grayscale,
+            gpu_id=gpu_id,
+        )
+        ocr_payload = {
+            "engine": "paddleocr_vl",
+            "model": settings.paddleocr_vl_model,
+            "gpu_id": gpu_id,
+        }
 
     parsed, llm_payload = extract_fields_with_llm(
         model_name=model_name,
@@ -391,6 +411,7 @@ def run_ocr_with_model(*, model_name: str, file_path: str, document_type: str, u
         "ocr_backend": ocr_backend,
         "ocr_model": ocr_model,
         "use_grayscale": use_grayscale,
+        "gpu_id": gpu_id,
     }
 
 
